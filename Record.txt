@@ -1,0 +1,7 @@
+Cloudinary {
+    cloudinary.config({
+    cloud_name: 'ddwfx2ktn', 
+    api_key: '387448294655364', 
+    api_secret: 'CQqQo09E_Tdkc-NHKDfAxw280RQ' // <--- ⚠️ PASTE YOUR REAL SECRET CODE HERE
+});
+}

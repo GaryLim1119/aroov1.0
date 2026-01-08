@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aroov Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Extra styles for the new filter bar */
+        .filter-bar {
+            padding: 15px 30px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            background: #fff;
+            border-bottom: 1px solid #e5e5ea;
+            align-items: center;
+        }
+        .filter-select, .filter-input {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #d2d2d7;
+            font-size: 13px;
+            background: #f5f5f7;
+        }
+        .filter-checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            user-select: none;
+            padding: 8px 12px;
+            background: #fff0f0;
+            border-radius: 8px;
+            border: 1px solid #ffcccc;
+        }
+        .clear-btn {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: #007aff;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .clear-btn:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div id="toast" class="toast">Success</div>
+
+    <aside class="sidebar">
+        <h2>AROOV ADMIN</h2>
+        <ul><li>Destinations</li></ul>
+    </aside>
+
+    <main class="content">
+        <nav class="top-nav">
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search ID, Name or State..." oninput="handleSearch()">
+            </div>
+        </nav>
+
+        <div class="filter-bar">
+            <select id="filterType" class="filter-select" onchange="changePage(1)">
+                <option value="">All Types</option>
+                <option value="Nature">Nature</option>
+                <option value="City">City</option>
+                <option value="Historical">Historical</option>
+                <option value="Beach">Beach</option>
+                <option value="Adventure">Adventure</option>
+            </select>
+
+            <input type="number" id="filterPrice" class="filter-input" placeholder="Max Price (RM)" oninput="handleSearch()" style="width: 120px;">
+
+            <label class="filter-checkbox-label">
+                <input type="checkbox" id="filterIncomplete" onchange="changePage(1)">
+                <span style="color: #ff3b30; font-weight: 600;">⚠️ Needs Fix</span>
+            </label>
+
+            <button onclick="clearFilters()" class="clear-btn">Reset Filters</button>
+        </div>
+
+        <div class="scroll-area">
+            <div class="main-grid">
+                
+                <section class="card">
+                    <h3 id="formTitle">Add New</h3>
+                    <form id="destForm">
+                        <input type="hidden" id="dest_id">
+                        <input type="text" id="name" placeholder="Name" required>
+                        <input type="text" id="state" placeholder="State">
+                        <textarea id="description" placeholder="Description" rows="3"></textarea>
+                        
+                        <div class="row">
+                            <select id="type" style="width:100%; padding:12px; border:1px solid #d2d2d7; border-radius:10px; margin-bottom:12px;">
+                                <option value="" disabled selected>Select Type</option>
+                                <option value="Nature">Nature</option>
+                                <option value="City">City</option>
+                                <option value="Historical">Historical</option>
+                                <option value="Beach">Beach</option>
+                                <option value="Adventure">Adventure</option>
+                            </select>
+                            <input type="text" id="activities" placeholder="Activities">
+                        </div>
+                        <div class="row">
+                            <input type="number" id="price_min" placeholder="Min RM">
+                            <input type="number" id="price_max" placeholder="Max RM">
+                        </div>
+                        <div class="row">
+                            <input type="text" id="latitude" placeholder="Lat">
+                            <input type="text" id="longtitude" placeholder="Lng">
+                        </div>
+                        <input type="text" id="maps_place_id" placeholder="Google Maps URL">
+
+                        <div id="dropZone" class="drop-zone">
+                            <p>Tap to upload image</p>
+                            <input type="file" id="fileInput" hidden>
+                            <img id="preview" src="">
+                        </div>
+
+                        <button type="submit" class="btn-primary">Save Changes</button>
+                        <button type="button" onclick="resetForm()" style="width:100%; margin-top:10px; background:none; border:none; color:#86868b; cursor:pointer; font-size:11px;">Cancel / Reset</button>
+                    </form>
+                </section>
+
+                <section class="card" style="padding:0; overflow:hidden;">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="col-img">Img</th>
+                                    <th class="col-info">Destination</th>
+                                    <th class="col-meta">Details</th>
+                                    <th class="col-price">Price</th>
+                                    <th class="col-map">Map</th>
+                                    <th class="col-act">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="pagination" class="pagination"></div>
+                </section>
+
+            </div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

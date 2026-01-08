@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explore Destinations | Aroov</title>
+    <link rel="stylesheet" href="style.css"> 
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="logo">Aroov Trip.</div>
+        <div class="nav-links">
+            <a href="/user" class="active">Explore</a>
+            <a href="/user/favourites.html">Favourites</a>
+            <a href="/user/groups.html">Groups</a>
+            <a href="/user/profile.html">Profile 👤</a>
+            <a href="/logout" class="btn-logout">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header-section">
+            <div class="header-text">
+                <h1>Find Your Next Adventure</h1>
+                <p>Discover hidden gems and popular spots across Malaysia.</p>
+            </div>
+            
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Search places..." oninput="applyFilters()">
+                <select id="typeFilter" onchange="applyFilters()">
+                    <option value="">Type</option>
+                    <option value="Island">Island</option>
+                    <option value="City">City</option>
+                    <option value="Nature">Nature</option>
+                    <option value="Historical">Historical</option>
+                </select>
+                <select id="priceFilter" onchange="applyFilters()">
+                    <option value="">Budget</option>
+                    <option value="100"> < RM100</option>
+                    <option value="300"> < RM300</option>
+                    <option value="500"> < RM500</option>
+                </select>
+                <button class="search-btn" onclick="loadDestinations()">🔍</button>
+            </div>
+        </div>
+
+        <div id="destGrid" class="grid">
+            </div>
+        <div id="pagination" class="pagination"></div>
+    </div>
+
+    <div id="detailModal" class="modal">
+        <div class="modal-content" id="modalContentInject"></div>
+    </div>
+
+    <div id="shareModal" class="modal-overlay">
+        <div class="share-box">
+            <div class="share-header">
+                <h3>Share Destination 🌏</h3>
+                <button onclick="closeShareModal()" class="close-share">×</button>
+            </div>
+
+            <p class="share-label">Share via Link</p>
+            <div class="share-actions">
+                <button class="btn-share-action" onclick="actionCopyLink()">
+                    🔗 Copy Link
+                </button>
+                <button class="btn-share-action" onclick="actionEmailShare()">
+                    ✉️ Send Email
+                </button>
+            </div>
+
+            <hr class="share-divider">
+
+            <p class="share-label">Add to a Group Trip</p>
+            <p style="font-size:12px; color:#999; margin-bottom:10px;">Select a group to add this spot to their voting board.</p>
+            
+            <div id="shareGroupList" class="share-group-list">
+                </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

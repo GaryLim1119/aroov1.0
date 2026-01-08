@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Favourites - Aroov</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="logo">Aroov.</div>
+        <div class="nav-links">
+            <a href="index.html">Explore</a>
+            <a href="#" class="active">My Favourites</a>
+            <a href="groups.html">My Groups</a>
+        </div>
+        <div style="display:flex; align-items:center; gap:15px;">
+            <span style="font-size:13px; color:#666;">Welcome, User</span>
+            <a href="/logout" class="btn-logout">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        
+        <div class="header-section">
+            <div class="header-text">
+                <h1>Your Saved Trips ❤️</h1>
+                <p>The destinations you have saved for later.</p>
+            </div>
+            </div>
+
+        <div class="grid" id="favGrid">
+            <p style="color:#888;">Loading your saved items...</p>
+        </div>
+
+    </div>
+
+    <div class="modal" id="detailModal">
+        <div class="modal-content" id="modalContentInject"></div>
+    </div>
+
+    <script src="favourites.js"></script>
+</body>
+</html>

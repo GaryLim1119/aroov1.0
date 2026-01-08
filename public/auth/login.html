@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aroov - Access</title>
+    <link rel="stylesheet" href="/auth/login.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="form-container">
+            <div class="auth-header">
+                <h2>Aroov</h2>
+                <p id="header-text">Welcome back! Please login to continue.</p>
+            </div>
+
+            <a href="/auth/google" class="google-btn">
+                <img src="google.png" alt="G">
+                <span>Continue with Google</span>
+            </a>
+
+            <div class="divider"><span>OR</span></div>
+
+            <form id="login-form" action="/login" method="POST">
+                <div class="input-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" name="email" placeholder="Email Address" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" name="password" placeholder="Password" required>
+                </div>
+                <button type="submit" class="submit-btn">Log In</button>
+                <p class="switch-text">
+                    New to Aroov? <a href="#" onclick="toggleForm('register')">Create Account</a>
+                </p>
+            </form>
+
+            <form id="register-form" action="/register" method="POST" style="display: none;">
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" name="name" placeholder="Full Name" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" name="email" placeholder="Email Address" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="reg-pass" name="password" placeholder="Password" required onkeyup="checkStrength()">
+                </div>
+                
+                <div class="strength-meter">
+                    <div id="strength-bar"></div>
+                </div>
+                <p id="strength-text">Password must have 8+ chars, 1 Uppercase, 1 Number.</p>
+
+                <button type="submit" class="submit-btn" id="reg-btn" disabled>Create Account</button>
+                <p class="switch-text">
+                    Already have an account? <a href="#" onclick="toggleForm('login')">Log In</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function toggleForm(type) {
+            const loginForm = document.getElementById('login-form');
+            const regForm = document.getElementById('register-form');
+            const headerText = document.getElementById('header-text');
+
+            if (type === 'register') {
+                loginForm.style.display = 'none';
+                regForm.style.display = 'block';
+                headerText.innerText = "Create an account to start your journey.";
+                regForm.classList.add('fade-in');
+            } else {
+                regForm.style.display = 'none';
+                loginForm.style.display = 'block';
+                headerText.innerText = "Welcome back! Please login to continue.";
+                loginForm.classList.add('fade-in');
+            }
+        }
+
+        function checkStrength() {
+            const pass = document.getElementById('reg-pass').value;
+            const bar = document.getElementById('strength-bar');
+            const text = document.getElementById('strength-text');
+            const btn = document.getElementById('reg-btn');
+
+            // Conditions
+            const hasUpper = /[A-Z]/.test(pass);
+            const hasLower = /[a-z]/.test(pass);
+            const hasNum = /[0-9]/.test(pass);
+            const isLength = pass.length >= 8;
+
+            let strength = 0;
+            if (isLength) strength++;
+            if (hasUpper) strength++;
+            if (hasLower) strength++;
+            if (hasNum) strength++;
+
+            // Visual Logic
+            if (strength <= 1) {
+                bar.style.width = "30%";
+                bar.style.background = "#ff3b30"; // Red
+                text.innerText = "Weak";
+                btn.disabled = true;
+            } else if (strength === 2 || strength === 3) {
+                bar.style.width = "60%";
+                bar.style.background = "#ffcc00"; // Yellow
+                text.innerText = "Medium";
+                btn.disabled = true;
+            } else if (strength === 4) {
+                bar.style.width = "100%";
+                bar.style.background = "#34c759"; // Green
+                text.innerText = "Strong";
+                btn.disabled = false; // Enable button
+            }
+
+            if(pass.length === 0) {
+                bar.style.width = "0%";
+                text.innerText = "Password must have 8+ chars, 1 Uppercase, 1 Number.";
+            }
+        }
+    </script>
+</body>
+</html>

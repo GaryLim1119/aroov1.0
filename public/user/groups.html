@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Travel Groups | Aroov</title>
+    <link rel="stylesheet" href="groups.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="logo">Aroov Trip.</div>
+        <div class="nav-links">
+            <a href="/user">Explore</a>
+            <a href="/user/favourites.html">Favourites</a>
+            <a href="/user/groups.html" class="active">Groups</a>
+            <a href="/logout" style="color:#e74c3c;">Logout</a>
+        </div>
+    </nav>
+
+    <div class="group-container">
+        
+        <div class="group-sidebar">
+            <div class="sidebar-header">
+                <h3>My Groups</h3>
+                <button onclick="openModal('modalCreate')" class="btn-small" title="Create Group">+</button>
+            </div>
+            <div id="groupList" class="group-list">
+                <p class="loading-text">Loading groups...</p>
+            </div>
+        </div>
+
+        <div class="group-content" id="groupDetailPanel" style="display:none;">
+            
+            <div class="group-header-row">
+                <div class="group-title">
+                    <h1 id="groupHeaderTitle">Group Name</h1>
+                    <span id="groupMemberCount" style="color:#777; font-size:14px;"></span>
+                </div>
+                <div class="group-actions" id="groupActions" style="display:none;">
+                    <button class="btn-secondary" onclick="openModal('modalEdit')">✏️ Edit</button>
+                    <button class="btn-delete" onclick="openModal('modalDelete')">🗑️ Delete</button>
+                </div>
+            </div>
+
+            <div class="nav-tabs">
+                <button class="tab-link active" onclick="switchTab('destinations', this)">Destinations 📍</button>
+                <button class="tab-link" onclick="switchTab('calendar', this)">Calendar 📅</button>
+                <button class="tab-link" onclick="switchTab('vote', this)">Voting Board 🗳️</button>
+                <button class="tab-link" onclick="switchTab('recommend', this)">Recommend 🔗</button>
+                <button class="tab-link" onclick="switchTab('members', this)">Members 👥</button>
+            </div>
+
+            <div id="tab-destinations" class="tab-pane active">
+                <h3 style="margin-bottom:20px;">Shared Destinations</h3>
+                <div id="destinationsList" class="cards-grid"></div>
+            </div>
+
+            <div id="tab-calendar" class="tab-pane" style="display:none;">
+                <div class="empty-state" style="height:400px; background:white; border-radius:12px; border:1px dashed #ccc; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                    <div style="font-size:40px;">📅</div>
+                    <h3>Trip Calendar</h3>
+                    <p>Select dates for your trip (Feature coming soon)</p>
+                </div>
+            </div>
+
+            <div id="tab-vote" class="tab-pane" style="display:none;">
+                <h3 style="margin-bottom:20px;">Top Voted Places</h3>
+                <div id="votingList" class="cards-grid"></div>
+            </div>
+
+            <div id="tab-recommend" class="tab-pane" style="display:none;">
+                <h3 style="margin-bottom:20px;">Add from your Favourites</h3>
+                <div id="recommendList" class="cards-grid"></div>
+            </div>
+
+            <div id="tab-members" class="tab-pane" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h3 style="margin:0;">Group Members</h3>
+                    <button class="btn-primary" onclick="openModal('modalInvite')">+ Invite Friend</button>
+                </div>
+                
+                <table class="member-table">
+                    <thead><tr><th>User</th><th>Role</th><th>Joined</th></tr></thead>
+                    <tbody id="memberListBody"></tbody>
+                </table>
+
+                <div id="pendingSection" style="display:none; margin-top:30px;">
+                    <h4 style="margin-bottom:10px;">Pending Invites</h4>
+                    <ul id="pendingInvitesList" style="list-style:none; padding:0;"></ul>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="emptyState" class="group-content empty-state" style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%;">
+            <div style="font-size:60px; margin-bottom:20px;">✈️</div>
+            <h3>Select a group to start planning</h3>
+        </div>
+    </div>
+
+    <div id="modalCreate" class="modal-overlay">
+        <div class="modal-box">
+            <h3>Create Group</h3>
+            <input type="text" id="newGroupName" placeholder="Group Name" class="modal-input">
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('modalCreate')">Cancel</button>
+                <button class="btn-primary" onclick="submitCreateGroup()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalInvite" class="modal-overlay">
+        <div class="modal-box">
+            <h3>Invite Friend</h3>
+            <input type="email" id="inviteEmail" placeholder="Email" class="modal-input">
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('modalInvite')">Cancel</button>
+                <button class="btn-primary" onclick="submitInvite()">Send</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="modalEdit" class="modal-overlay">
+        <div class="modal-box">
+            <h3>Edit Group Name</h3>
+            <input id="editGroupName" class="modal-input" placeholder="New Name">
+            <div class="modal-actions">
+                <button onclick="closeModal('modalEdit')" class="btn-cancel">Cancel</button>
+                <button onclick="submitEditGroup()" class="btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalDelete" class="modal-overlay">
+        <div class="modal-box">
+            <h3>Delete Group?</h3>
+            <p>This cannot be undone.</p>
+            <div class="modal-actions">
+                <button onclick="closeModal('modalDelete')" class="btn-cancel">No</button>
+                <button onclick="submitDeleteGroup()" class="btn-delete">Yes, Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="groups.js"></script>
+</body>
+</html>

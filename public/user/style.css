@@ -1,0 +1,217 @@
+:root {
+    --primary: #FF5A5F; /* Airbnb Red */
+    --bg: #f7f7f9;
+    --text: #222;
+    --card-radius: 24px;
+}
+
+* { box-sizing: border-box; font-family: 'Poppins', sans-serif; margin: 0; padding: 0; }
+body { background-color: var(--bg); color: var(--text); }
+a { text-decoration: none; }
+
+/* --- NAVBAR --- */
+.navbar {
+    display: flex; justify-content: space-between; align-items: center;
+    background: white; padding: 15px 40px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100;
+}
+.logo { font-size: 24px; font-weight: 700; color: var(--primary); letter-spacing: -1px; }
+
+/* Fixed nav-links layout */
+.nav-links { display: flex; align-items: center; } 
+.nav-links a { color: #555; margin-left: 25px; font-weight: 500; font-size: 14px; transition: 0.3s; }
+.nav-links a:hover, .nav-links a.active { color: var(--primary); }
+
+.btn-logout { padding: 8px 18px; border: 1px solid #ddd; border-radius: 20px; color: #555; font-size: 13px; transition: 0.3s; }
+.btn-logout:hover { border-color: var(--primary); color: var(--primary); }
+
+/* --- LAYOUT & SEARCH --- */
+.container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+.header-section { display: flex; justify-content: space-between; align-items: end; margin-bottom: 40px; flex-wrap: wrap; gap: 20px; }
+.header-text h1 { font-size: 32px; font-weight: 600; margin-bottom: 10px; }
+.header-text p { color: #666; font-size: 16px; }
+
+.search-bar {
+    background: white; padding: 8px 8px 8px 20px; border-radius: 50px;
+    display: flex; gap: 10px; align-items: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #eee;
+}
+.search-bar input, .search-bar select { border: none; outline: none; font-size: 14px; color: #333; background: transparent; }
+.search-btn { background: var(--primary); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+.search-btn:hover { transform: scale(1.05); }
+
+/* --- AESTHETIC CARD GRID --- */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 30px; }
+
+.card {
+    background: white; border-radius: var(--card-radius); overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.05);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+    position: relative; display: flex; flex-direction: column;
+}
+.card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+
+.card-image-wrapper {
+    position: relative; height: 280px; width: 100%; overflow: hidden;
+}
+.card-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+.card:hover .card-img { transform: scale(1.05); }
+
+/* Dark Overlay */
+.card-overlay {
+    position: absolute; bottom: 0; left: 0; width: 100%;
+    background: linear-gradient(to top, rgba(0,0,0,0.8) 10%, transparent);
+    padding: 80px 25px 25px 25px; color: white;
+    display: flex; flex-direction: column; justify-content: flex-end;
+}
+.card-title { font-size: 22px; font-weight: 600; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+.card-location { font-size: 14px; opacity: 0.9; display: flex; align-items: center; gap: 5px; }
+
+.card-bottom { padding: 20px 25px; display: flex; justify-content: space-between; align-items: center; background: white; }
+.card-price { display: flex; flex-direction: column; }
+.price-label { font-size: 12px; color: #888; font-weight: 500; }
+.price-value { color: var(--text); font-weight: 700; font-size: 18px; }
+
+/* Icon Buttons */
+.card-icons { display: flex; gap: 12px; }
+.icon-btn {
+    width: 40px; height: 40px; border-radius: 50%; background: #f7f7f9;
+    border: none; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: 0.2s; color: #555;
+}
+.icon-btn:hover { background: #eee; color: var(--primary); }
+
+/* --- HEART BUTTON LOGIC (NEW) --- */
+.heart-btn {
+    transition: all 0.2s ease;
+}
+/* This handles the RED color when JS adds the class 'liked' */
+.heart-btn.liked {
+    color: rgb(255, 0, 0) !important;
+    background-color: #ff8aa5; /* Optional: Light red background */
+}
+.heart-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Details Button */
+.btn-details {
+    margin: 0 25px 25px 25px;
+    background: var(--text); color: white; border: none;
+    padding: 14px; border-radius: 30px; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: 0.3s; text-align: center;
+}
+.btn-details:hover { background: var(--primary); box-shadow: 0 5px 15px rgba(255, 90, 95, 0.3); }
+
+/* Pagination */
+.pagination { text-align: center; margin-top: 60px; }
+.page-btn { background: white; border: 1px solid #eee; padding: 10px 18px; margin: 0 5px; cursor: pointer; border-radius: 8px; font-weight: 500; transition:0.2s; }
+.page-btn:hover, .page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+/* --- LARGE MODAL --- */
+.modal {
+    display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.6); z-index: 200; backdrop-filter: blur(5px);
+    align-items: center; justify-content: center; padding: 20px;
+}
+.modal-content {
+    background: white; border-radius: 30px; width: 100%; max-width: 900px; 
+    max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+}
+.close-btn {
+    position: absolute; top: 25px; right: 30px;
+    background: rgba(255,255,255,0.8); width: 40px; height: 40px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 24px; cursor: pointer; z-index: 10; transition: 0.2s;
+}
+.close-btn:hover { background: white; transform: rotate(90deg); }
+
+.modal-hero-img { width: 100%; height: 450px; object-fit: cover; border-radius: 30px 30px 0 0; }
+.modal-body { padding: 40px; }
+.modal-flex { display: flex; gap: 40px; flex-wrap: wrap; }
+.modal-main { flex: 2; min-width: 300px; }
+.modal-sidebar { flex: 1; min-width: 250px; background: #f9f9f9; padding: 30px; border-radius: 20px; height: fit-content; }
+
+.modal-title { font-size: 36px; font-weight: 700; margin-bottom: 10px; line-height: 1.2; }
+.modal-subtitle { font-size: 16px; color: #666; margin-bottom: 25px; display: flex; align-items: center; gap: 8px; }
+.modal-label { font-size: 13px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: block; }
+.modal-desc { font-size: 16px; line-height: 1.8; color: #444; margin-bottom: 30px; white-space: pre-line; }
+.modal-price-tag { font-size: 28px; font-weight: 700; color: var(--primary); margin-bottom: 5px; display: block;}
+
+.btn-map {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 15px; background: #e3f2fd; color: #007aff;
+    border-radius: 15px; font-weight: 600; transition: 0.2s; border:none; cursor: pointer; margin-top: 20px;
+}
+.btn-map:hover { background: #bbdefb; }
+.btn-modal-add {
+    width: 100%; padding: 18px; background: var(--primary); color: white;
+    border-radius: 15px; font-size: 18px; font-weight: 600; border: none; cursor: pointer; transition: 0.3s; margin-top: 15px;
+}
+.btn-modal-add:hover { background: #e04a4f; box-shadow: 0 10px 20px rgba(255, 90, 95, 0.3); }
+
+/* --- NEW SHARE MODAL STYLES --- */
+
+/* Distinct Overlay for Share Modal */
+.modal-overlay {
+    display: none; 
+    position: fixed; z-index: 2000; left: 0; top: 0; 
+    width: 100%; height: 100%; 
+    background-color: rgba(44, 62, 80, 0.6); 
+    backdrop-filter: blur(4px); 
+    justify-content: center; align-items: center;
+}
+.modal-overlay.active { display: flex; }
+
+.share-box {
+    background: white; padding: 25px; border-radius: 20px;
+    width: 90%; max-width: 420px; 
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    animation: scaleIn 0.3s ease;
+}
+
+@keyframes scaleIn { 
+    from { transform: scale(0.95); opacity: 0; } 
+    to { transform: scale(1); opacity: 1; } 
+}
+
+.share-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.share-header h3 { margin: 0; font-size: 18px; font-weight: 700; }
+.close-share { background: none; border: none; font-size: 24px; cursor: pointer; color: #555; }
+
+.share-label { font-size: 12px; font-weight: 700; color: #555; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px; }
+
+/* Share Buttons (Link/Email) */
+.share-actions { display: flex; gap: 10px; margin-bottom: 20px; }
+.btn-share-action {
+    flex: 1; padding: 12px; border: 1px solid #eee; background: #f8f9fa;
+    border-radius: 12px; cursor: pointer; font-weight: 600; color: #444; transition: 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-share-action:hover { background: #e3f2fd; color: #007aff; border-color: #bbdefb; }
+
+.share-divider { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
+
+/* Group List Styles */
+.share-group-list { 
+    max-height: 200px; overflow-y: auto; 
+    border: 1px solid #f0f0f0; border-radius: 12px; 
+}
+
+.share-group-item {
+    display: flex; justify-content: space-between; align-items: center; padding: 12px 15px;
+    border-bottom: 1px solid #f9f9f9; transition: 0.2s;
+}
+.share-group-item:last-child { border-bottom: none; }
+.share-group-item:hover { background: #fdfdfd; }
+
+.share-group-info h4 { margin: 0; font-size: 14px; font-weight: 600; color: #333; }
+.share-group-info span { font-size: 11px; color: #999; }
+
+.btn-add-group {
+    background: var(--primary); color: white; border: none; padding: 6px 14px;
+    border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: 0.2s;
+}
+.btn-add-group:hover { background: #e0484d; }
+.btn-add-group:disabled { background: #ddd; cursor: not-allowed; }

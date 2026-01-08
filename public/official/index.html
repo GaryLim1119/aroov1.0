@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aroov - Discover Malaysia</title>
+  
+  <link rel="stylesheet" href="/official/stylev2.css" />
+</head>
+<body>
+  <nav>
+    <div class="nav-logo">Aroov</div>
+    <ul class="nav-links">
+      <li><a href="javascript:void(0)" onclick="document.getElementById('attractions').scrollIntoView({behavior: 'smooth'})">Attractions</a></li>
+      <li><a href="#explore">Explore</a></li>
+      <li><a href="/login" class="cta-button" style="padding: 10px 20px;">Login</a></li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <h1>Malaysia</h1>
+    <p>Experience the vibrant heart of Malaysia. Where modern architecture meets rich culture.</p>
+    <button class="cta-button" onclick="document.getElementById('attractions').scrollIntoView({behavior: 'smooth'})">Explore Attractions</button>
+  </section>
+
+  <section id="attractions" class="section">
+    <div class="section-header">
+      <h2>Must-Visit Places</h2>
+      <p>Here are 10 iconic landmarks to get you started. Login to see more!</p>
+    </div>
+
+    <ul class="cards-grid" id="destinations-grid">
+        </ul>
+  </section>
+
+  <footer>
+    <p>© 2025 Discover Kuala Lumpur. Designed with inspiration from Apple.</p>
+  </footer>
+
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <button class="close" id="close-modal-btn">×</button>
+      <p id="modal-title"></p>
+      <img id="modal-image" src="" alt="">
+      <p class="description" id="modal-description"></p>
+      
+      <div class="modal-grid">
+          <div>
+              <div class="detail-row"><span class="detail-label">State</span><span class="detail-value" id="modal-state"></span></div>
+              <div class="detail-row"><span class="detail-label">Type</span><span class="detail-value" id="modal-type"></span></div>
+              <div class="detail-row"><span class="detail-label">Activities</span><span class="detail-value" id="modal-activities"></span></div>
+              <div class="detail-row"><span class="detail-label">Price</span><span class="detail-value" id="modal-price"></span></div>
+              
+              <a href="#" target="_blank" id="modal-gmap-link" class="gmap-btn">
+                <span>📍 Open in Google Maps</span>
+              </a>
+          </div>
+          <div class="map-container">
+              <iframe id="modal-map-frame" src="" loading="lazy"></iframe>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/official/script.js"></script>
+</body>
+</html>
