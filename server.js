@@ -28,19 +28,27 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 app.use(session({
     secret: process.env.SESSION_SECRET || 'secretkey',
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production', // Secure cookies in production
+        maxAge: 24 * 60 * 60 * 1000 
+    }
 }));
 app.use(passport.initialize());
 app.use(passport.session());
 
 // =========================================================
-// --- DATABASE CONNECTION ---
+// --- DATABASE CONNECTION (TiDB Cloud) ---
 // =========================================================
 const db = mysql.createPool({
-    host: process.env.DB_HOST || '127.0.0.1',       
-    user: process.env.DB_USER || 'root',            
-    password: process.env.DB_PASS || '',             
-    database: process.env.DB_NAME || 'aroov_db',    
+    host: process.env.DB_HOST,       
+    user: process.env.DB_USER,            
+    password: process.env.DB_PASS,             
+    database: process.env.DB_NAME,    
+    port: process.env.DB_PORT || 4000, 
+    ssl: {
+        rejectUnauthorized: true 
+    },
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
@@ -48,7 +56,7 @@ const db = mysql.createPool({
 
 db.getConnection()
     .then(conn => {
-        console.log("✅ Database 'aroov_db' Connected Successfully!");
+        console.log("✅ Connected to TiDB Cloud successfully!");
         conn.release();
     })
     .catch(err => {
@@ -80,11 +88,12 @@ const upload = multer({ storage: storage });
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
 
-// GOOGLE STRATEGY
+// GOOGLE STRATEGY (Updated for Vercel)
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL
+    // DYNAMIC CALLBACK URL
+    callbackURL: `${process.env.BASE_URL}/auth/google/callback`
   },
   async function(accessToken, refreshToken, profile, cb) {
       try {
@@ -168,14 +177,12 @@ app.get('/logout', (req, res, next) => {
 });
 
 // =========================================================
-// --- FAVOURITES APIs (FIXED WITH SAFETY CHECKS) ---
+// --- FAVOURITES APIs ---
 // =========================================================
 
 app.post('/api/user/favourites', checkAuthenticated, async (req, res) => {
     try {
-        // SAFETY: Check both 'id' and 'user_id'
         const userId = req.user.id || req.user.user_id; 
-        
         const destId = req.body.destinationId || req.body.dest_id || req.body.destination_id;
 
         if (!destId) return res.status(400).json({ error: "Missing destination ID" });
@@ -211,8 +218,6 @@ app.delete('/api/user/favourites/:id', checkAuthenticated, async (req, res) => {
 app.get('/api/user/favourites', checkAuthenticated, async (req, res) => {
     try {
         const userId = req.user.id || req.user.user_id;
-        console.log("🔍 Fetching Favourites for User ID:", userId);
-
         const sql = `
             SELECT destination.* FROM favourites 
             JOIN destination ON favourites.dest_id = destination.dest_id 
@@ -229,14 +234,11 @@ app.get('/api/user/favourites', checkAuthenticated, async (req, res) => {
 // --- DESTINATIONS API ---
 // =========================================================
 
-// 1. GET ALL DESTINATIONS (With 'is_liked')
 app.get('/api/destinations', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = 15;
         const offset = (page - 1) * limit;
-        
-        // SAFETY: Use .id or .user_id if user exists, else 0
         const userId = req.user ? (req.user.id || req.user.user_id) : 0;
         
         const search = req.query.search || '';
@@ -278,7 +280,6 @@ app.get('/api/destinations', async (req, res) => {
         const [rows] = await db.query(sql, params);
         const data = rows.map(item => ({ ...item, is_liked: item.is_liked === 1 }));
 
-        // Count Query
         let countSql = `SELECT COUNT(*) as count FROM destination WHERE 1=1`;
         let countParams = [];
         if (search) {
@@ -300,7 +301,6 @@ app.get('/api/destinations', async (req, res) => {
     }
 });
 
-// 2. CREATE OR UPDATE DESTINATION
 app.post('/api/destinations', upload.single('imageFile'), async (req, res) => {
     try {
         const { dest_id, name, state, description, activities, type, price_min, price_max, latitude, longtitude, maps_place_id, existingImage } = req.body;
@@ -320,13 +320,11 @@ app.post('/api/destinations', upload.single('imageFile'), async (req, res) => {
             );
         }
         res.json({ message: 'Saved successfully', imageUrl: imagePath });
-
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// 3. DELETE DESTINATION
 app.delete('/api/destinations/:id', async (req, res) => {
     try {
         await db.query('DELETE FROM destination WHERE dest_id = ?', [req.params.id]);
@@ -336,7 +334,6 @@ app.delete('/api/destinations/:id', async (req, res) => {
     }
 });
 
-// 4. RANDOM API
 app.get('/api/destinations/random', async (req, res) => {
     try {
         const [rows] = await db.query('SELECT * FROM destination ORDER BY RAND() LIMIT 10');
@@ -347,10 +344,9 @@ app.get('/api/destinations/random', async (req, res) => {
 });
 
 // =========================================================
-// --- GROUP MANAGEMENT ROUTES (FIXED & DEBUGGED) ---
+// --- GROUP MANAGEMENT ROUTES ---
 // =========================================================
 
-// Configure Email
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -359,24 +355,9 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-// 1. GET USER GROUPS
 app.get('/api/user/groups', async (req, res) => {
-    if (!req.user) {
-        console.log("❌ DEBUG: User is NOT logged in.");
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    // SAFETY: Try to find the ID in any possible property
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const userId = req.user.id || req.user.user_id;
-
-    console.log("-----------------------------------------");
-    console.log("🔍 DEBUG: Full User Object:", req.user);
-    console.log("👤 DEBUG: Extracted User ID:", userId);
-
-    if (!userId) {
-        console.log("❌ DEBUG: User ID is undefined! Passport is not saving the ID correctly.");
-        return res.status(500).json({ error: 'User ID missing in session' });
-    }
 
     try {
         const sql = `
@@ -386,22 +367,17 @@ app.get('/api/user/groups', async (req, res) => {
             JOIN group_members gm ON g.group_id = gm.group_id
             WHERE gm.user_id = ?
         `;
-
         const [rows] = await db.query(sql, [userId]);
-
-        console.log("✅ DEBUG: Query Success. Found " + rows.length + " groups.");
         res.json(rows);
     } catch (err) {
-        console.error("❌ DEBUG: Database Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// 2. CREATE GROUP
 app.post('/api/groups', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const { name } = req.body;
-    const userId = req.user.id || req.user.user_id; // FIX
+    const userId = req.user.id || req.user.user_id; 
 
     try {
         const [result] = await db.query('INSERT INTO \`groups\` (name, created_by) VALUES (?, ?)', [name, userId]);
@@ -413,12 +389,11 @@ app.post('/api/groups', async (req, res) => {
     }
 });
 
-// 3. EDIT GROUP NAME
 app.put('/api/groups/:id', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const { name } = req.body;
     const groupId = req.params.id;
-    const userId = req.user.id || req.user.user_id; // FIX
+    const userId = req.user.id || req.user.user_id; 
 
     try {
         const [check] = await db.query('SELECT * FROM group_members WHERE group_id = ? AND user_id = ? AND role="leader"', [groupId, userId]);
@@ -431,11 +406,10 @@ app.put('/api/groups/:id', async (req, res) => {
     }
 });
 
-// 4. DELETE GROUP
 app.delete('/api/groups/:id', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const groupId = req.params.id;
-    const userId = req.user.id || req.user.user_id; // FIX
+    const userId = req.user.id || req.user.user_id; 
 
     try {
         const [check] = await db.query('SELECT * FROM group_members WHERE group_id = ? AND user_id = ? AND role="leader"', [groupId, userId]);
@@ -448,18 +422,15 @@ app.delete('/api/groups/:id', async (req, res) => {
     }
 });
 
-// 5. GET GROUP DETAILS & MEMBERS
 app.get('/api/groups/:id', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const groupId = req.params.id;
     const userId = req.user.id || req.user.user_id;
 
     try {
-        // Check if I am a member
         const [myRole] = await db.query('SELECT role FROM group_members WHERE group_id = ? AND user_id = ?', [groupId, userId]);
         if (myRole.length === 0) return res.status(403).json({ error: 'Access denied' });
 
-        // FIX: Changed u.id to u.user_id in both SELECT and JOIN
         const [members] = await db.query(`
             SELECT u.user_id, u.name, u.email, u.picture, gm.role, gm.joined_at 
             FROM group_members gm 
@@ -475,12 +446,11 @@ app.get('/api/groups/:id', async (req, res) => {
             currentUserRole: myRole[0].role 
         });
     } catch (err) {
-        console.error("Member Load Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// 6. INVITE MEMBER
+// --- INVITE MEMBER (Updated for Vercel) ---
 app.post('/api/groups/:id/invite', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     
@@ -496,8 +466,9 @@ app.post('/api/groups/:id/invite', async (req, res) => {
 
         await db.query('INSERT INTO group_invites (group_id, email, token) VALUES (?, ?, ?)', [groupId, email, token]);
 
-        // CHANGE THIS URL TO MATCH YOUR HOST IF DEPLOYED
-        const inviteLink = `http://localhost:3000/api/join?token=${token}`;
+        // DYNAMIC INVITE LINK
+        const baseUrl = process.env.BASE_URL; // REQUIRED in Env Var
+        const inviteLink = `${baseUrl}/api/join?token=${token}`;
         
         const mailOptions = {
             from: `"${senderName} (via Aroov)" <${process.env.GMAIL_USER}>`, 
@@ -521,7 +492,6 @@ app.post('/api/groups/:id/invite', async (req, res) => {
     }
 });
 
-// 7. JOIN GROUP (Via Link)
 app.get('/api/join', async (req, res) => {
     const { token } = req.query;
     if (!req.user) return res.redirect('/login');
@@ -531,7 +501,7 @@ app.get('/api/join', async (req, res) => {
         if (invites.length === 0) return res.send("This invite link is invalid or expired.");
 
         const invite = invites[0];
-        const userId = req.user.id || req.user.user_id; // FIX
+        const userId = req.user.id || req.user.user_id; 
 
         await db.query('INSERT INTO group_members (group_id, user_id, role) VALUES (?, ?, ?)', [invite.group_id, userId, 'member']);
         await db.query('UPDATE group_invites SET status="accepted" WHERE id = ?', [invite.id]);
@@ -543,10 +513,9 @@ app.get('/api/join', async (req, res) => {
 });
 
 // ==========================================
-// SHARED TRIPS & VOTING (FIXED)
+// SHARED TRIPS & VOTING
 // ==========================================
 
-// 8. SHARE TRIP TO GROUP
 app.post('/api/groups/:groupId/recommend', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     
@@ -562,12 +531,9 @@ app.post('/api/groups/:groupId/recommend', async (req, res) => {
             [groupId, destination_id]
         );
         
-        // --- THIS IS THE CHANGE ---
         if (exists.length > 0) {
-            // We send 409 (Conflict) or 400 with your specific message
             return res.status(400).json({ error: 'Destination has already been shared to this group' });
         }
-        // --------------------------
 
         await db.query(
             'INSERT INTO group_trips (group_id, dest_id, shared_by) VALUES (?, ?, ?)', 
@@ -581,14 +547,12 @@ app.post('/api/groups/:groupId/recommend', async (req, res) => {
     }
 });
 
-// 9. GET SHARED TRIPS
 app.get('/api/groups/:groupId/trips', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const { groupId } = req.params;
     const userId = req.user.id || req.user.user_id; 
 
     try {
-        // FIX: Changed u.id to u.user_id in the JOIN
         const [rows] = await db.query(`
             SELECT 
                 gt.trip_ref_id, gt.shared_at,
@@ -610,11 +574,10 @@ app.get('/api/groups/:groupId/trips', async (req, res) => {
     }
 });
 
-// 10. TOGGLE VOTE
 app.post('/api/groups/vote', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const { tripRefId } = req.body;
-    const userId = req.user.id || req.user.user_id; // FIX
+    const userId = req.user.id || req.user.user_id; 
 
     try {
         const [check] = await db.query('SELECT * FROM group_votes WHERE trip_ref_id = ? AND user_id = ?', [tripRefId, userId]);
