@@ -137,7 +137,7 @@ passport.use(new LocalStrategy({ usernameField: 'email' }, async (email, passwor
 
 // ✅ FIXED: Points directly to public/index.html
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public','official', 'official.html'));
 });
 
 // NOTE: Ensure 'auth' folder is still inside 'public' for this to work
