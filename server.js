@@ -36,6 +36,25 @@ app.use(cookieSession({
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
 }));
 
+// --- FIX FOR PASSPORT + COOKIE-SESSION ---
+app.use((req, res, next) => {
+    if (req.session && !req.session.regenerate) {
+        req.session.regenerate = (cb) => {
+            // "regenerate" simply clears the current session in this context
+            // cookie-session doesn't have a specific regenerate method, 
+            // but this keeps Passport happy.
+            cb();
+        };
+    }
+    if (req.session && !req.session.save) {
+        req.session.save = (cb) => {
+            // cookie-session saves automatically, so we just invoke the callback
+            cb();
+        };
+    }
+    next();
+});
+
 app.use(passport.initialize());
 app.use(passport.session());
 
