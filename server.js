@@ -3,7 +3,7 @@ const express = require('express');
 const mysql = require('mysql2'); 
 const cors = require('cors');
 const path = require('path');
-const session = require('express-session');
+const cookieSession = require('cookie-session');
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
@@ -27,15 +27,15 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads'))); 
 
 // --- SESSION SETUP ---
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'secretkey',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        secure: process.env.NODE_ENV === 'production', // Secure cookies in production
-        maxAge: 24 * 60 * 60 * 1000 
-    }
+// --- SESSION SETUP (UPDATED FOR VERCEL) ---
+app.set('trust proxy', 1); // Trust Vercel's proxy (Required)
+
+app.use(cookieSession({
+    name: 'session',
+    keys: [process.env.SESSION_SECRET || 'secretkey'], // Encrypts the cookie
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
 }));
+
 app.use(passport.initialize());
 app.use(passport.session());
 
