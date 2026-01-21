@@ -25,7 +25,7 @@ a { text-decoration: none; }
 .btn-logout { padding: 8px 18px; border: 1px solid #ddd; border-radius: 20px; color: #555; font-size: 13px; transition: 0.3s; }
 .btn-logout:hover { border-color: var(--primary); color: var(--primary); }
 
-/* --- LAYOUT & SEARCH --- */
+/* --- LAYOUT & HEADER --- */
 .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
 
 .header-section { 
@@ -36,7 +36,11 @@ a { text-decoration: none; }
 .header-text h1 { font-size: 32px; font-weight: 600; margin-bottom: 10px; }
 .header-text p { color: #666; font-size: 16px; }
 
-/* MAIN SEARCH PILL CONTAINER (DESKTOP) */
+/* =========================================
+   NEW SEARCH BAR STYLES (Custom Dropdowns)
+   ========================================= */
+
+/* Main Container */
 .search-bar {
     background: white; 
     padding: 5px; 
@@ -45,54 +49,116 @@ a { text-decoration: none; }
     align-items: center;
     box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
     border: 1px solid #eee;
-    height: 66px; /* Slightly taller for elegance */
-    max-width: 100%;
+    height: 66px; 
+    position: relative;
+    z-index: 50; /* Ensure menus float above content */
 }
 
-/* 1. TEXT INPUT */
+/* 1. TEXT INPUT WRAPPER */
+.search-input-wrapper {
+    flex: 1; /* Takes remaining width */
+    display: flex;
+    align-items: center;
+    padding-left: 20px;
+    height: 100%;
+}
+
+.search-icon-input {
+    color: var(--primary);
+    font-size: 16px;
+    margin-right: 10px;
+}
+
 .search-bar input { 
     border: none; 
     outline: none; 
     font-size: 14px; 
     color: #333; 
     background: transparent;
-    padding-left: 25px; 
-    flex: 1; 
+    width: 100%;
     height: 100%;
-    min-width: 150px;
 }
-.search-bar input::placeholder { color: #999; }
 
-/* 2. DROPDOWN STYLING */
-.search-bar select { 
-    border: none; 
-    outline: none; 
-    font-size: 14px; 
-    font-weight: 600; /* Bold text for better readability */
-    color: #444; 
-    background-color: transparent;
+/* 2. CUSTOM DROPDOWN CONTAINER */
+.custom-dropdown {
+    position: relative;
     height: 100%;
-    cursor: pointer;
-    
-    /* Vertical Separator Line */
-    border-left: 1px solid #eee; 
+    border-left: 1px solid #eee; /* Vertical Divider */
+    min-width: 140px;
+}
+
+/* The Button that opens the menu */
+.dropdown-trigger {
+    background: none;
+    border: none;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     padding: 0 20px;
-    margin-left: 5px;
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #444;
+}
+.dropdown-trigger:hover { background-color: #fafafa; }
 
-    /* Custom Arrow Logic */
-    appearance: none;
-    -webkit-appearance: none;
-    /* Clean Chevron Icon */
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 15px center;
-    background-size: 10px;
-    padding-right: 35px; /* Room for arrow */
+/* The Popup Menu */
+.dropdown-menu {
+    display: none; /* Hidden by default */
+    position: absolute;
+    top: 115%; /* Just below the bar */
+    left: 0;
+    width: 220px; /* Wider for icons */
+    background: white;
+    border-radius: 16px; 
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    padding: 8px;
+    border: 1px solid rgba(0,0,0,0.05);
+    z-index: 100;
+    animation: fadeIn 0.2s ease;
 }
 
-.search-bar select:hover { background-color: #fafafa; }
+/* Show menu when active */
+.custom-dropdown.active .dropdown-menu { display: block; }
+.custom-dropdown.active .chevron { transform: rotate(180deg); transition: 0.2s; }
 
-/* 3. SEARCH BUTTON WITH ICON */
+/* Menu Items inside Popup */
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+    color: #333;
+    font-size: 14px;
+    font-weight: 500;
+}
+.dropdown-item:hover { background-color: #f1f3f4; }
+.dropdown-item svg { color: #555; opacity: 0.8; }
+
+/* The Divider line inside menu */
+.dropdown-divider {
+    height: 1px;
+    background-color: #eee;
+    margin: 6px 0;
+}
+
+/* Danger/Reset Item */
+.dropdown-item.danger { color: #d93025; }
+.dropdown-item.danger svg { color: #d93025; }
+.dropdown-item.danger:hover { background-color: #fce8e6; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 3. SEARCH BUTTON */
 .search-btn { 
     background: var(--primary); 
     border: none; 
@@ -103,19 +169,12 @@ a { text-decoration: none; }
     transition: 0.2s; 
     margin-right: 5px; 
     flex-shrink: 0;
-    
-    /* Centering the icon */
     display: flex; 
     align-items: center; 
     justify-content: center;
-
-    /* Add Search Icon via CSS so it always shows */
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3e%3ccircle cx='11' cy='11' r='8'%3e%3c/circle%3e%3cline x1='21' y1='21' x2='16.65' y2='16.65'%3e%3c/line%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: center;
+    box-shadow: 0 4px 10px rgba(255, 90, 95, 0.2);
 }
-.search-btn:hover { transform: scale(1.05); box-shadow: 0 4px 10px rgba(255, 90, 95, 0.4); }
-
+.search-btn:hover { transform: scale(1.05); }
 
 /* --- AESTHETIC CARD GRID --- */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 30px; }
@@ -160,7 +219,10 @@ a { text-decoration: none; }
 
 /* --- HEART BUTTON LOGIC --- */
 .heart-btn { transition: all 0.2s ease; }
-.heart-btn.liked { color: rgb(255, 0, 0) !important; background-color: #ff8aa5; }
+.heart-btn.liked {
+    color: rgb(255, 0, 0) !important;
+    background-color: #ff8aa5; 
+}
 .heart-btn:hover { transform: scale(1.1); }
 
 /* Details Button */
@@ -219,26 +281,34 @@ a { text-decoration: none; }
 }
 .btn-modal-add:hover { background: #e04a4f; box-shadow: 0 10px 20px rgba(255, 90, 95, 0.3); }
 
-/* --- NEW SHARE MODAL STYLES --- */
+/* --- SHARE MODAL STYLES --- */
 .modal-overlay {
-    display: none; position: fixed; z-index: 2000; left: 0; top: 0; 
-    width: 100%; height: 100%; background-color: rgba(44, 62, 80, 0.6); 
-    backdrop-filter: blur(4px); justify-content: center; align-items: center;
+    display: none; 
+    position: fixed; z-index: 2000; left: 0; top: 0; 
+    width: 100%; height: 100%; 
+    background-color: rgba(44, 62, 80, 0.6); 
+    backdrop-filter: blur(4px); 
+    justify-content: center; align-items: center;
 }
 .modal-overlay.active { display: flex; }
 
 .share-box {
     background: white; padding: 25px; border-radius: 20px;
-    width: 90%; max-width: 420px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    width: 90%; max-width: 420px; 
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
     animation: scaleIn 0.3s ease;
 }
-@keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+@keyframes scaleIn { 
+    from { transform: scale(0.95); opacity: 0; } 
+    to { transform: scale(1); opacity: 1; } 
+}
 
 .share-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .share-header h3 { margin: 0; font-size: 18px; font-weight: 700; }
 .close-share { background: none; border: none; font-size: 24px; cursor: pointer; color: #555; }
-
 .share-label { font-size: 12px; font-weight: 700; color: #555; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px; }
+
 .share-actions { display: flex; gap: 10px; margin-bottom: 20px; }
 .btn-share-action {
     flex: 1; padding: 12px; border: 1px solid #eee; background: #f8f9fa;
@@ -247,8 +317,10 @@ a { text-decoration: none; }
 }
 .btn-share-action:hover { background: #e3f2fd; color: #007aff; border-color: #bbdefb; }
 .share-divider { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
-
-.share-group-list { max-height: 200px; overflow-y: auto; border: 1px solid #f0f0f0; border-radius: 12px; }
+.share-group-list { 
+    max-height: 200px; overflow-y: auto; 
+    border: 1px solid #f0f0f0; border-radius: 12px; 
+}
 .share-group-item {
     display: flex; justify-content: space-between; align-items: center; padding: 12px 15px;
     border-bottom: 1px solid #f9f9f9; transition: 0.2s;
@@ -259,84 +331,100 @@ a { text-decoration: none; }
 .share-group-info span { font-size: 11px; color: #999; }
 .btn-add-group {
     background: var(--primary); color: white; border: none; padding: 6px 14px;
-    border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s;
+    border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: 0.2s;
 }
 .btn-add-group:hover { background: #e0484d; }
 .btn-add-group:disabled { background: #ddd; cursor: not-allowed; }
 
-/* --- PROFILE CHIP STYLING --- */
+/* --- PROFILE CHIP --- */
 .profile-chip {
     display: flex; align-items: center; gap: 10px;
-    background: #f1f3f4; padding: 4px 16px 4px 4px; border-radius: 50px;
-    text-decoration: none; color: #333 !important; font-weight: 600; font-size: 14px;
+    background: #f1f3f4; padding: 4px 16px 4px 4px;
+    border-radius: 50px; text-decoration: none;
+    color: #333 !important; font-weight: 600; font-size: 14px;
     transition: all 0.3s ease; border: 1px solid transparent; margin-left: 20px;
 }
 .profile-chip:hover { background: #e8eaed; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-.profile-chip img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(0,0,0,0.05); }
+.profile-chip img {
+    width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(0,0,0,0.05);
+}
 
-/* --- MOBILE RESPONSIVE --- */
+/* --- MOBILE & TABLET RESPONSIVENESS --- */
 .menu-toggle { display: none; flex-direction: column; gap: 5px; cursor: pointer; }
 .menu-toggle .bar { width: 25px; height: 3px; background-color: #333; border-radius: 5px; transition: 0.3s; }
 
 @media (max-width: 768px) {
     .navbar { padding: 15px 20px; }
     .menu-toggle { display: flex; }
-    
+
+    /* Hide links by default on mobile */
     .nav-links {
-        position: absolute; top: 60px; left: 0; width: 100%; background: white;
-        flex-direction: column; align-items: center; padding: 20px 0; gap: 20px;
+        position: absolute; top: 60px; left: 0; width: 100%;
+        background: white; flex-direction: column; align-items: center;
+        padding: 20px 0; gap: 20px;
         box-shadow: 0 10px 10px rgba(0,0,0,0.05);
-        clip-path: polygon(0 0, 100% 0, 100% 0, 0 0); transition: all 0.4s ease-in-out;
+        clip-path: polygon(0 0, 100% 0, 100% 0, 0 0); /* Hidden */
+        transition: all 0.4s ease-in-out;
     }
     .nav-links.active { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
     .nav-links a { margin-left: 0; font-size: 16px; }
-    
-    .profile-chip { margin-left: 0; background: #fff; border: 1px solid #eee; width: 80%; justify-content: center; padding: 8px; }
-    
+
+    .profile-chip {
+        margin-left: 0; background: #fff; border: 1px solid #eee;
+        width: 80%; justify-content: center; padding: 8px;
+    }
+
     .header-text h1 { font-size: 26px; text-align: center; }
     .header-text p { text-align: center; font-size: 14px; }
     .header-section { flex-direction: column; align-items: stretch; gap: 20px; }
+    .container { padding: 20px; }
 
-    /* =========================================
-       PROFESSIONAL MOBILE SEARCH UI
-       ========================================= */
+    /* --- MOBILE SEARCH BAR (STACKED) --- */
     .search-bar {
-        flex-direction: column;
+        flex-direction: column; /* Stack Vertical */
         height: auto;
         padding: 0;
-        background: transparent; /* Remove container background */
-        border: none; /* Remove container border */
-        box-shadow: none; /* Remove container shadow */
+        background: transparent;
+        border: none;
+        box-shadow: none;
         gap: 12px;
     }
 
-    /* 1. Mobile Inputs look like distinct "Cards" */
-    .search-bar input, .search-bar select {
+    /* 1. Stack Input */
+    .search-input-wrapper {
         width: 100%;
-        background-color: white;
-        border: 1px solid #e0e0e0;
-        border-radius: 15px; /* Nice soft corners */
-        padding: 16px 20px; /* Fat finger padding */
-        font-size: 15px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.03); /* Subtle lift */
-        margin: 0; /* Reset margins */
-        height: auto; /* Allow auto height */
+        background: white;
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+        border: 1px solid #eee;
+        height: 60px;
     }
 
-    /* Remove the desktop divider lines */
-    .search-bar select { border-left: 1px solid #e0e0e0; } 
+    /* 2. Stack Custom Dropdowns */
+    .custom-dropdown {
+        width: 100%;
+        border-left: none; /* Remove divider */
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+        border: 1px solid #eee;
+        height: 60px;
+    }
+
+    /* Adjust popup menu for mobile */
+    .dropdown-menu {
+        width: 100%; /* Full width */
+        top: 65px; /* Push below the stacked button */
+        position: relative; /* Flow somewhat naturally */
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    }
     
-    /* 2. Mobile Search Button */
+    /* 3. Stack Button */
     .search-btn {
         width: 100%;
-        border-radius: 15px; /* Match input corners */
-        height: 55px; /* Tall button */
-        margin-top: 5px;
+        border-radius: 16px;
         margin-right: 0;
-        box-shadow: 0 5px 15px rgba(255, 90, 95, 0.3);
-        /* Ensure Icon is centered */
-        background-position: center;
     }
-
-    .container { padding: 20px; }
 }
