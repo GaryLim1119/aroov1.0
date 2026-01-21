@@ -5,9 +5,10 @@ let currentItemToShare = null;
 
 // --- 1. LOAD DESTINATIONS ---
 async function loadDestinations() {
+    // We now read from the HIDDEN inputs for Type and Price
     const search = document.getElementById('searchInput').value;
-    const type = document.getElementById('typeFilter').value;
-    const maxPrice = document.getElementById('priceFilter').value;
+    const type = document.getElementById('typeFilter') ? document.getElementById('typeFilter').value : '';
+    const maxPrice = document.getElementById('priceFilter') ? document.getElementById('priceFilter').value : '';
 
     let url = `/api/destinations?page=${currentPage}`;
     if (search) url += `&search=${encodeURIComponent(search)}`;
@@ -41,7 +42,7 @@ function renderGrid(data) {
         const imgUrl = item.images || 'https://via.placeholder.com/400x300?text=Aroov+Trip';
         const heartClass = item.is_liked ? 'liked' : ''; 
         
-        // SAFE STRINGIFY: Fixes the issue where buttons wouldn't click
+        // SAFE STRINGIFY: Fixes the issue where buttons wouldn't click due to quotes
         const safeItem = JSON.stringify(item).replace(/"/g, '&quot;');
 
         return `
@@ -205,7 +206,7 @@ async function toggleFavourite(btn, itemId) {
     }
 }
 
-// --- 7. DETAILS MODAL (UPDATED TO SHOW ACTIVITIES & PRICE) ---
+// --- 7. DETAILS MODAL ---
 const detailModal = document.getElementById('detailModal');
 const modalContent = document.getElementById('modalContentInject');
 
@@ -213,12 +214,10 @@ function openModal(item) {
     if(!detailModal || !modalContent) return;
 
     const imgUrl = item.images || 'https://via.placeholder.com/800x450';
-    // Use &quot; replacement to be extra safe with passing objects
     const safeItem = JSON.stringify(item).replace(/"/g, '&quot;');
     
-    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.name + ' ' + item.state + ' Malaysia')}`;
+    const mapUrl = `https://www.google.com/maps/search/?api=1&query=$?q=${encodeURIComponent(item.name + ' ' + item.state + ' Malaysia')}`;
 
-    // ✅ HERE IS THE UPDATED LAYOUT WITH ACTIVITIES, TYPE, AND PRICE
     modalContent.innerHTML = `
         <div class="close-btn" onclick="closeDetailModal()" style="position:absolute; right:20px; top:20px; cursor:pointer; font-size:24px; color:white; background:rgba(0,0,0,0.5); width:40px; height:40px; border-radius:50%; text-align:center; line-height:40px; z-index:10;">×</div>
         <img src="${imgUrl}" class="modal-hero-img" style="width:100%; height:300px; object-fit:cover;">
@@ -271,40 +270,82 @@ function closeDetailModal() {
     if(detailModal) detailModal.style.display = 'none'; 
 }
 
-// Close modals on outside click
-window.onclick = function(e) { 
-    if (e.target == detailModal) closeDetailModal(); 
-    const shareModal = document.getElementById('shareModal');
-    if (e.target == shareModal) closeShareModal();
+
+// --- 8. CUSTOM DROPDOWN & SEARCH LOGIC ---
+
+// Toggle the specific dropdown visibility
+function toggleDropdown(id) {
+    // 1. Close all other dropdowns first
+    const allDropdowns = document.querySelectorAll('.custom-dropdown');
+    allDropdowns.forEach(dd => {
+        if (dd.id !== id) dd.classList.remove('active');
+    });
+
+    // 2. Toggle the requested one
+    const dropdown = document.getElementById(id);
+    if(dropdown) dropdown.classList.toggle('active');
 }
 
-// --- 8. USER PROFILE & NAVBAR LOGIC ---
+// Handle option selection
+// Arguments: dropdownId (HTML ID), text (What user sees), value (What DB needs)
+function selectOption(dropdownId, text, value) {
+    // 1. Update the Trigger Text UI
+    const dropdown = document.getElementById(dropdownId);
+    const textSpan = dropdown.querySelector('.selected-text');
+    textSpan.innerText = text;
+    textSpan.style.color = "#222"; // Active dark color
 
-// Fetch User Data for Navbar
+    // 2. Update the HIDDEN Input Value
+    if (dropdownId === 'typeDropdown') {
+        document.getElementById('typeFilter').value = value;
+    } else if (dropdownId === 'priceDropdown') {
+        document.getElementById('priceFilter').value = value;
+    }
+
+    // 3. Close the menu
+    dropdown.classList.remove('active');
+
+    // 4. Trigger Search Immediately (Auto-Apply Filter)
+    currentPage = 1; // Reset to page 1
+    loadDestinations();
+}
+
+// --- 9. GLOBAL CLICK HANDLER (MERGED) ---
+// This handles closing modals AND dropdowns when clicking outside
+window.onclick = function(event) {
+    
+    // Close Detail Modal
+    const detailModal = document.getElementById('detailModal');
+    if (event.target == detailModal) closeDetailModal();
+
+    // Close Share Modal
+    const shareModal = document.getElementById('shareModal');
+    if (event.target == shareModal) closeShareModal();
+
+    // Close Custom Dropdowns if clicked outside the dropdown area
+    if (!event.target.closest('.custom-dropdown')) {
+        document.querySelectorAll('.custom-dropdown').forEach(dd => {
+            dd.classList.remove('active');
+        });
+    }
+}
+
+
+// --- 10. USER PROFILE & NAVBAR ---
 async function fetchUserProfile() {
     try {
         const res = await fetch('/api/user/me'); 
-        
         if (res.ok) {
             const user = await res.json();
             
-            // Debug: Check console to ensure data is arriving
-            console.log("User fetched:", user);
-
-            // 1. Update Name (using 'name' column)
+            // Update Name
             const nameEl = document.getElementById('navUserName');
-            if (nameEl) {
-                // Use user.name from your DB, fallback to "Traveler"
-                nameEl.textContent = user.name || "Traveler"; 
-            }
+            if (nameEl) nameEl.textContent = user.name || "Traveler"; 
 
-            // 2. Update Image (using 'picture' column)
+            // Update Image
             const imgEl = document.getElementById('navUserImg');
-            if (imgEl) {
-                // Use user.picture from your DB
-                if (user.picture && user.picture.trim() !== "") {
-                    imgEl.src = user.picture;
-                }
+            if (imgEl && user.picture && user.picture.trim() !== "") {
+                imgEl.src = user.picture;
             }
         }
     } catch (err) {
@@ -314,15 +355,15 @@ async function fetchUserProfile() {
 
 // Mobile Menu Toggle
 const menuBtn = document.getElementById('mobile-menu-btn');
-const navLinks = document.getElementById('nav-links-container');
+const navLinksContainer = document.getElementById('nav-links-container');
 
 if (menuBtn) {
     menuBtn.addEventListener('click', () => {
-        navLinks.classList.toggle('active');
+        navLinksContainer.classList.toggle('active');
         
-        // Optional: Animate hamburger bars
+        // Animate hamburger bars
         const bars = document.querySelectorAll('.bar');
-        if (navLinks.classList.contains('active')) {
+        if (navLinksContainer.classList.contains('active')) {
             bars[0].style.transform = 'translateY(8px) rotate(45deg)';
             bars[1].style.opacity = '0';
             bars[2].style.transform = 'translateY(-8px) rotate(-45deg)';
@@ -334,61 +375,21 @@ if (menuBtn) {
     });
 }
 
-/* --- CUSTOM DROPDOWN LOGIC --- */
-
-// Toggle the specific dropdown
-function toggleDropdown(id) {
-    // Close all other dropdowns first
-    const allDropdowns = document.querySelectorAll('.custom-dropdown');
-    allDropdowns.forEach(dd => {
-        if (dd.id !== id) dd.classList.remove('active');
-    });
-
-    // Toggle the clicked one
-    const dropdown = document.getElementById(id);
-    dropdown.classList.toggle('active');
-}
-
-// Handle option selection
-function selectOption(dropdownId, value) {
-    // 1. Update the Trigger Text
-    const dropdown = document.getElementById(dropdownId);
-    const textSpan = dropdown.querySelector('.selected-text');
-    textSpan.innerText = value;
-    textSpan.style.color = "#222"; // Make text darker to show selection
-
-    // 2. Close the menu
-    dropdown.classList.remove('active');
-
-    // 3. (Optional) Log the value for filtering
-    console.log(`Selected ${value} in ${dropdownId}`);
-}
-
-// Close dropdowns if clicking outside
-window.onclick = function(event) {
-    if (!event.target.closest('.custom-dropdown')) {
-        document.querySelectorAll('.custom-dropdown').forEach(dd => {
-            dd.classList.remove('active');
-        });
-    }
-}
-
 // Pagination logic
 function renderPagination(total) {
     const nav = document.getElementById('pagination');
     if(!nav) return;
     nav.innerHTML = '';
+    // Limit pagination buttons if too many pages (optional improvement)
     for(let i=1; i<=total; i++) {
         nav.innerHTML += `<button class="page-btn ${i===currentPage?'active':''}" onclick="changePage(${i})">${i}</button>`;
     }
 }
 function changePage(p) { currentPage = p; loadDestinations(); }
-function applyFilters() { currentPage = 1; loadDestinations(); }
 
 
-
-// Add this to your existing DOMContentLoaded event
+// --- INITIALIZATION ---
 document.addEventListener("DOMContentLoaded", () => {
-    loadDestinations(); // Your existing function
-    fetchUserProfile(); // New function
+    loadDestinations();
+    fetchUserProfile();
 });

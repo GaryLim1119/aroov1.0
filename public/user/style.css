@@ -1,3 +1,5 @@
+/* /public/user/style.css */
+
 :root {
     --primary: #FF5A5F; /* Airbnb Red */
     --bg: #f7f7f9;
@@ -413,12 +415,17 @@ a { text-decoration: none; }
         height: 60px;
     }
 
-    /* Adjust popup menu for mobile */
+    /* Adjust popup menu for mobile to feel like accordion */
     .dropdown-menu {
         width: 100%; /* Full width */
-        top: 65px; /* Push below the stacked button */
-        position: relative; /* Flow somewhat naturally */
-        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        top: 100%; /* Just below the button */
+        position: relative; /* Flows naturally in stack */
+        box-shadow: none;
+        border: none;
+        background: #fafafa;
+        border-radius: 0 0 16px 16px;
+        margin-top: -10px; /* Connect visually */
+        padding-top: 15px;
     }
     
     /* 3. Stack Button */
