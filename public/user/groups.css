@@ -1,11 +1,12 @@
 /* =========================================
-   1. VARIABLES & RESET (From style.css)
+   1. VARIABLES & RESET
    ========================================= */
 :root {
     --primary: #FF5A5F; /* Airbnb Red */
     --bg: #f7f7f9;
     --text: #222;
     --card-radius: 24px;
+    --navbar-height: 70px;
 }
 
 * { 
@@ -18,13 +19,14 @@
 body { 
     background-color: var(--bg); 
     color: var(--text); 
-    overflow: hidden; /* Kept hidden for Desktop to allow Sidebar scrolling */
+    /* Prevent body scroll on Desktop so only sidebar/content scroll */
+    overflow: hidden; 
 }
 
 a { text-decoration: none; }
 
 /* =========================================
-   2. NAVBAR (Exact match to style.css)
+   2. STICKY NAVBAR
    ========================================= */
 .navbar {
     display: flex; 
@@ -33,9 +35,13 @@ a { text-decoration: none; }
     background: white; 
     padding: 15px 40px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05); 
-    height: 70px; /* Fixed height for calculation consistency */
-    position: relative; 
-    z-index: 100;
+    height: var(--navbar-height); 
+    
+    /* --- STICKY MAGIC --- */
+    position: sticky; 
+    top: 0; 
+    z-index: 1000;
+    width: 100%;
 }
 
 .logo { 
@@ -45,439 +51,223 @@ a { text-decoration: none; }
     letter-spacing: -1px; 
 }
 
-/* Nav Links Layout */
-.nav-links { 
-    display: flex; 
-    align-items: center; 
-} 
-
+/* Desktop Nav Links */
+.nav-links { display: flex; align-items: center; } 
 .nav-links a { 
-    color: #555; 
-    margin-left: 25px; 
-    font-weight: 500; 
-    font-size: 14px; 
-    transition: 0.3s; 
+    color: #555; margin-left: 25px; 
+    font-weight: 500; font-size: 14px; transition: 0.3s; 
 }
+.nav-links a:hover, .nav-links a.active { color: var(--primary); }
 
-.nav-links a:hover, 
-.nav-links a.active { 
-    color: var(--primary); 
-}
-
-/* Logout Button */
 .btn-logout { 
-    padding: 8px 18px; 
-    border: 1px solid #ddd; 
-    border-radius: 20px; 
-    color: #555; 
-    font-size: 13px; 
-    transition: 0.3s; 
-    margin-left: 20px;
+    padding: 8px 18px; border: 1px solid #ddd; border-radius: 20px; 
+    color: #555; font-size: 13px; transition: 0.3s; margin-left: 20px;
 }
-.btn-logout:hover { 
-    border-color: var(--primary); 
-    color: var(--primary); 
-}
+.btn-logout:hover { border-color: var(--primary); color: var(--primary); }
 
-/* Profile Chip */
 .profile-chip {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: #f1f3f4;
-    padding: 4px 16px 4px 4px;
-    border-radius: 50px;
-    text-decoration: none !important;
-    color: #333 !important;
-    font-weight: 600;
-    font-size: 14px;
-    transition: all 0.3s ease;
-    border: 1px solid transparent;
-    margin-left: 20px;
+    display: flex; align-items: center; gap: 10px;
+    background: #f1f3f4; padding: 4px 16px 4px 4px;
+    border-radius: 50px; text-decoration: none !important;
+    color: #333 !important; font-weight: 600; font-size: 14px;
+    transition: all 0.3s ease; margin-left: 20px;
 }
+.profile-chip:hover { background: #e8eaed; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.profile-chip img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
 
-.profile-chip:hover {
-    background: #e8eaed;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.profile-chip img {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid rgba(0,0,0,0.05);
-}
-
-/* Hamburger Menu Icon */
-.menu-toggle {
-    display: none;
-    flex-direction: column;
-    gap: 5px;
-    cursor: pointer;
-}
-.menu-toggle .bar {
-    width: 25px;
-    height: 3px;
-    background-color: #333;
-    border-radius: 5px;
-    transition: 0.3s;
-}
+/* Hamburger (Hidden on Desktop) */
+.menu-toggle { display: none; flex-direction: column; gap: 5px; cursor: pointer; }
+.menu-toggle .bar { width: 25px; height: 3px; background-color: #333; border-radius: 5px; transition: 0.3s; }
 
 /* =========================================
-   3. GROUP LAYOUT SPECIFICS (Keep this)
+   3. DESKTOP & TABLET LAYOUT
    ========================================= */
-
-/* LAYOUT CONTAINER */
 .group-container {
     display: flex;
-    height: calc(100vh - 70px); /* Adjusted to match new navbar height */
+    /* Height calculation ensures layout fits perfectly under navbar */
+    height: calc(100vh - var(--navbar-height)); 
 }
 
-/* SIDEBAR */
+/* SIDEBAR (Left Panel) */
 .group-sidebar {
     width: 300px;
     background: white;
     border-right: 1px solid #eee;
     display: flex;
     flex-direction: column;
+    overflow: hidden; /* Prevent sidebar itself from scrolling weirdly */
 }
 
 .sidebar-header {
     padding: 20px;
     border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: flex; justify-content: space-between; align-items: center;
 }
-
 .sidebar-header h3 { margin: 0; font-size: 18px; }
 
 .btn-small {
-    width: 30px; height: 30px;
-    border-radius: 50%;
-    border: none;
-    background: var(--primary);
-    color: white;
-    font-size: 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 30px; height: 30px; border-radius: 50%; border: none;
+    background: var(--primary); color: white; font-size: 20px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
 
 .group-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px;
+    flex: 1; overflow-y: auto; padding: 10px;
 }
 
 .group-item {
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 5px;
-    cursor: pointer;
-    transition: 0.2s;
-    border: 1px solid transparent;
+    padding: 15px; border-radius: 8px; margin-bottom: 5px;
+    cursor: pointer; transition: 0.2s; border: 1px solid transparent;
 }
-
 .group-item:hover { background: #f9f9f9; }
 .group-item.active { background: #fff5f5; border-color: var(--primary); }
 .group-item h4 { margin: 0; font-size: 15px; }
 .group-item span { font-size: 12px; color: #888; }
 
-/* MAIN CONTENT */
+/* MAIN CONTENT (Right Panel) */
 .group-content {
     flex: 1;
     padding: 30px 40px;
-    overflow-y: auto;
-}
-
-.empty-state {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    color: #999;
-    height: 100%;
+    overflow-y: auto; /* Allow scrolling inside content area */
 }
 
 .group-header-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 20px;
+    display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;
 }
-
 .group-title h1 { margin: 0; font-size: 28px; color: #222; }
 
 .group-actions button {
-    margin-left: 10px;
-    padding: 8px 15px;
-    border: 1px solid #ddd;
-    background: white;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 13px;
+    margin-left: 10px; padding: 8px 15px; border: 1px solid #ddd;
+    background: white; border-radius: 5px; cursor: pointer; font-size: 13px;
 }
 .btn-delete { color: #e74c3c; border-color: #e74c3c !important; }
 .btn-delete:hover { background: #e74c3c !important; color: white !important; }
 
-/* TABS */
+/* TABS (Desktop Style) */
 .nav-tabs {
-    display: flex;
-    border-bottom: 1px solid #ddd;
-    margin-bottom: 25px;
+    display: flex; border-bottom: 1px solid #ddd; margin-bottom: 25px;
 }
-
 .tab-link {
-    padding: 10px 20px;
-    background: none;
-    border: none;
-    font-size: 14px;
-    font-weight: 500;
-    color: #666;
-    cursor: pointer;
+    padding: 10px 20px; background: none; border: none; font-size: 14px;
+    font-weight: 500; color: #666; cursor: pointer;
     border-bottom: 3px solid transparent;
+    transition: 0.3s;
 }
-
-.tab-link.active {
-    color: var(--primary);
-    border-bottom: 3px solid var(--primary);
-}
-
-.tab-pane { display: none; }
-.tab-pane.active { display: block; animation: fadeIn 0.3s; }
-
+.tab-link.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+.tab-pane { display: none; animation: fadeIn 0.3s; }
+.tab-pane.active { display: block; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-/* BUTTONS */
-.btn-primary {
-    background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 500;
-}
+/* BUTTONS & TABLES */
+.btn-primary { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 500; }
 .btn-primary:hover { background: #e04a4f; }
 
-.btn-secondary { background: white; border: 1px solid #ccc; color: #333; }
-
-/* MEMBER TABLE */
-.member-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-
+.member-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 .member-table th, .member-table td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
 .member-table th { background: #f9f9f9; font-weight: 600; font-size: 13px; color: #555; }
 
-/* CARDS GRID (Voting & Recommend) */
-.cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
-}
-
-.trip-card {
-    background: white;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    display: flex;
-    flex-direction: column;
-}
-
-.trip-img {
-    width: 100%;
-    height: 180px;
-    object-fit: cover;
-}
-
-.trip-info {
-    padding: 15px;
-    flex: 1;
-}
-
+/* CARDS */
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+.trip-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; }
+.trip-img { width: 100%; height: 180px; object-fit: cover; }
+.trip-info { padding: 15px; flex: 1; }
 .trip-info h4 { margin: 0 0 5px 0; font-size: 16px; }
 .trip-info p { margin: 0; color: #777; font-size: 13px; }
-
-.trip-actions {
-    padding: 15px;
-    border-top: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.btn-vote {
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 20px;
-    padding: 5px 12px;
-    cursor: pointer;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    transition: 0.2s;
-}
-
-.btn-vote.voted {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-}
-
-.btn-add {
-    width: 100%;
-    padding: 10px;
-    background: #222;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-}
+.trip-actions { padding: 15px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+.btn-vote { background: white; border: 1px solid #ddd; border-radius: 20px; padding: 5px 12px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 5px; transition: 0.2s; }
+.btn-vote.voted { background: var(--primary); color: white; border-color: var(--primary); }
 
 /* MODALS */
-.modal-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.modal-box {
-    background: white;
-    padding: 30px;
-    border-radius: 12px;
-    width: 400px;
-    text-align: center;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-}
-
-.modal-input {
-    width: 100%;
-    padding: 12px;
-    margin: 15px 0 25px 0;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    box-sizing: border-box;
-}
-
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; }
+.modal-box { background: white; padding: 30px; border-radius: 12px; width: 400px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+.modal-input { width: 100%; padding: 12px; margin: 15px 0 25px 0; border: 1px solid #ddd; border-radius: 6px; }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 .btn-cancel { background: #f1f1f1; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; color: #333; }
 .btn-confirm-delete { background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
 
-
 /* =========================================
-   4. RESPONSIVE / MOBILE (Exact match to style.css)
+   4. RESPONSIVE / MOBILE DESIGN
    ========================================= */
 @media (max-width: 768px) {
-    /* Navbar Changes from style.css */
-    .navbar {
-        padding: 15px 20px; 
-    }
+    
+    /* 1. NAVBAR - FIXED & STICKY */
+    .navbar { padding: 15px 20px; }
+    .menu-toggle { display: flex; }
 
-    .menu-toggle {
-        display: flex; /* Show hamburger */
-    }
-
-    /* Links Dropdown (Clip-path style) */
+    /* Full Screen Dropdown Menu */
     .nav-links {
-        position: absolute;
-        top: 70px; /* Below navbar */
-        left: 0;
-        width: 100%;
-        background: white;
-        flex-direction: column;
-        align-items: center;
-        padding: 20px 0;
-        gap: 20px;
-        box-shadow: 0 10px 10px rgba(0,0,0,0.05);
-        clip-path: polygon(0 0, 100% 0, 100% 0, 0 0); /* Hidden */
-        transition: all 0.4s ease-in-out;
-        z-index: 999;
+        position: fixed; top: 70px; left: 0; width: 100%; height: calc(100vh - 70px);
+        background: white; flex-direction: column; justify-content: flex-start;
+        padding-top: 40px; gap: 30px; clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+        transition: all 0.4s ease-in-out; z-index: 999;
     }
+    .nav-links.active { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+    .nav-links a { margin: 0; font-size: 18px; }
+    
+    .profile-chip { margin: 0; width: 80%; justify-content: center; padding: 10px; background: #f7f7f9; }
+    .btn-logout { margin: 0; width: 80%; text-align: center; padding: 12px; }
 
-    .nav-links.active {
-        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); /* Visible */
-    }
-
-    .nav-links a {
-        margin-left: 0; 
-        font-size: 16px;
-    }
-
-    /* Adjust Profile Chip for Mobile Menu */
-    .profile-chip {
-        margin-left: 0;
-        background: #fff;
-        border: 1px solid #eee;
-        width: 80%;
-        justify-content: center;
-        padding: 8px;
-    }
-
-    /* Button Logout adjustment for mobile */
-    .btn-logout {
-        margin-left: 0;
-        width: 80%;
-        text-align: center;
-    }
-
-    /* --- GROUP LAYOUT RESPONSIVE (From original groups.css) --- */
-    body {
-        overflow: auto; /* Allow scrolling on mobile */
-    }
-
+    /* 2. LAYOUT - STACKED & SCROLLABLE */
+    body { overflow: auto; /* Allow full page scroll on mobile */ }
+    
     .group-container {
-        flex-direction: column; /* Stack Sidebar on top of Content */
-        height: auto; 
+        flex-direction: column;
+        height: auto; /* Content decides height */
     }
 
+    /* 3. MOBILE SIDEBAR (Horizontal Scroll List) */
     .group-sidebar {
-        width: 100%;
-        height: auto;
-        border-right: none;
-        border-bottom: 5px solid #f0f0f0;
+        width: 100%; height: auto;
+        border-right: none; border-bottom: 1px solid #eee;
+        background: #fff;
     }
     
     .group-list {
-        max-height: 300px; /* Limit height of sidebar list on mobile */
-    }
-
-    .group-content {
-        width: 100%;
-        padding: 20px;
-        height: auto;
-        overflow: visible;
-    }
-
-    .group-header-row {
-        flex-direction: column;
-        gap: 15px;
-    }
-
-    .group-actions button {
-        margin-left: 0;
-        margin-right: 10px;
-    }
-
-    .nav-tabs {
-        overflow-x: auto;
+        display: flex; /* Horizontal Layout */
+        overflow-x: auto; /* Swipeable */
+        padding: 15px; gap: 10px;
         white-space: nowrap;
-        padding-bottom: 5px;
+        -webkit-overflow-scrolling: touch; 
+        scrollbar-width: none;
+    }
+    .group-list::-webkit-scrollbar { display: none; } /* Hide scrollbar */
+
+    .group-item {
+        margin: 0; min-width: 150px; /* Card width */
+        border: 1px solid #eee; flex-direction: column; 
+        align-items: center; text-align: center; justify-content: center;
+        background: #f9f9f9;
+    }
+    .group-item.active { background: white; border: 1px solid var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+
+    /* 4. CONTENT & PILL TABS */
+    .group-content { width: 100%; padding: 20px 15px; overflow: visible; }
+    .group-header-row { flex-direction: column; gap: 15px; }
+    .group-actions { width: 100%; display: flex; gap: 10px; }
+    .group-actions button { flex: 1; margin: 0; }
+
+    /* PILL TABS (Professional UI) */
+    .nav-tabs {
+        display: flex; gap: 10px; overflow-x: auto;
+        padding-bottom: 15px; border-bottom: none;
+        white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+
+    .tab-link {
+        background: #f1f3f4; color: #555; border-radius: 20px;
+        padding: 10px 20px; border: none; font-size: 13px; font-weight: 600;
+        transition: 0.2s;
+    }
+    .tab-link.active {
+        background: var(--primary); color: white;
+        border-bottom: none; box-shadow: 0 4px 10px rgba(255, 90, 95, 0.3);
     }
 
-    .cards-grid {
-        grid-template-columns: 1fr; 
-    }
-
-    .modal-box {
-        width: 90%;
-        margin: 20px;
-    }
+    /* 5. MOBILE GRIDS */
+    .cards-grid { grid-template-columns: 1fr; gap: 25px; }
+    .trip-card { border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.06); }
+    .modal-box { width: 90%; margin: 20px; }
+    
+    .member-table { display: block; overflow-x: auto; } /* Allow table scroll if wide */
 }
