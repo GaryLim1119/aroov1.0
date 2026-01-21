@@ -1,13 +1,21 @@
-// public/user/profile.js
-
 let calendarInstance = null;
+let selectedDates = null; // Store dates from drag selection
 
 document.addEventListener('DOMContentLoaded', () => {
-    fetchUserProfileNav(); // Sets navbar name/image
-    initProfileData();     // Loads user data from DB
-    initCalendar();        // Setup FullCalendar
+    // 1. Mobile Menu Toggle Logic
+    const mobileBtn = document.getElementById('mobile-menu-btn');
+    const navLinks = document.getElementById('nav-links-container');
+
+    mobileBtn.addEventListener('click', () => {
+        navLinks.classList.toggle('active');
+    });
+
+    // 2. Initial Data Load
+    fetchUserProfileNav();
+    initProfileData();
+    initCalendar();
     
-    // Tag Selection Logic (Visual toggle)
+    // 3. Tag Logic
     document.querySelectorAll('.tag-item').forEach(tag => {
         tag.addEventListener('click', function() {
             this.classList.toggle('selected');
@@ -15,24 +23,110 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// --- 1. LOAD PROFILE DATA ---
+// --- CALENDAR LOGIC (User Availability) ---
+function initCalendar() {
+    const calendarEl = document.getElementById('calendar');
+
+    calendarInstance = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: { left: 'prev', center: 'title', right: 'next' },
+        selectable: true, // Allows drag selection
+        events: '/api/user/calendar', // Fetches Uni events AND User Availability
+        
+        // When user drags across dates
+        select: function(info) {
+            selectedDates = {
+                start: info.startStr,
+                end: info.endStr // FullCalendar end date is exclusive (correct for DB)
+            };
+            
+            // Show Modal
+            document.getElementById('modalDateRange').innerText = 
+                `From ${info.startStr} to ${getDateBefore(info.endStr)}`;
+            document.getElementById('availNote').value = ""; // Clear input
+            document.getElementById('availModal').classList.remove('hidden');
+        },
+
+        // When user clicks an existing event
+        eventClick: async function(info) {
+            // Only allow deleting user's own busy events (marked grey)
+            if (info.event.backgroundColor === '#555' || info.event.extendedProps.type === 'user_busy') {
+                if(confirm("Remove this busy period?")) {
+                    await deleteAvailability(info.event.id);
+                }
+            }
+        }
+    });
+
+    calendarInstance.render();
+}
+
+// --- MODAL FUNCTIONS ---
+function closeModal() {
+    document.getElementById('availModal').classList.add('hidden');
+    calendarInstance.unselect(); // Clear visual selection
+}
+
+async function saveAvailability() {
+    const note = document.getElementById('availNote').value;
+    const btn = document.querySelector('.btn-confirm');
+    btn.innerText = "Saving...";
+
+    try {
+        const payload = {
+            start_date: selectedDates.start,
+            end_date: selectedDates.end,
+            note: note
+        };
+
+        const res = await fetch('/api/user/availability', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+
+        if(res.ok) {
+            calendarInstance.refetchEvents(); // Reload calendar to show new grey block
+            closeModal();
+        } else {
+            alert("Failed to save dates.");
+        }
+    } catch(err) {
+        console.error(err);
+    } finally {
+        btn.innerText = "Mark as Busy";
+    }
+}
+
+async function deleteAvailability(avail_id) {
+    try {
+        const res = await fetch(`/api/user/availability/${avail_id}`, { method: 'DELETE' });
+        if(res.ok) calendarInstance.refetchEvents();
+    } catch(err) { console.error(err); }
+}
+
+// Helper: FullCalendar end date is exclusive, so visual needs -1 day
+function getDateBefore(dateStr) {
+    let date = new Date(dateStr);
+    date.setDate(date.getDate() - 1);
+    return date.toISOString().split('T')[0];
+}
+
+// --- PROFILE DATA LOGIC (Same as before) ---
 async function initProfileData() {
     try {
-        // Fetch User Info
         const res = await fetch('/api/user/profile');
-        if (res.status === 401) return window.location.href = '/login'; // Redirect if not logged in
+        if (res.status === 401) return window.location.href = '/login';
         const user = await res.json();
 
-        // Fetch University List
+        // Load University Options
         const uniRes = await fetch('/api/universities');
         const unis = await uniRes.json();
-        
-        // Populate Dropdown
         const uniSelect = document.getElementById('selectUni');
         uniSelect.innerHTML = `<option value="">-- Select University --</option>` + 
             unis.map(u => `<option value="${u.university_id}">${u.name}</option>`).join('');
 
-        // Fill Form Fields
+        // Fill Fields
         document.getElementById('profileAvatar').src = user.picture || 'https://via.placeholder.com/100';
         document.getElementById('profileNameDisplay').textContent = user.name;
         document.getElementById('profileEmailDisplay').textContent = user.email;
@@ -40,7 +134,6 @@ async function initProfileData() {
         document.getElementById('budgetMin').value = user.budget_min;
         document.getElementById('budgetMax').value = user.budget_max;
 
-        // Set Role & Toggle UI
         if (user.role === 'student') {
             document.querySelector(`input[name="role"][value="student"]`).checked = true;
             toggleUniversity(true);
@@ -50,136 +143,62 @@ async function initProfileData() {
             toggleUniversity(false);
         }
 
-        // Restore Selected Tags (Parse JSON from DB)
         restoreTags('typeTags', user.preferred_types);
         restoreTags('activityTags', user.preferred_activities);
 
-    } catch (err) {
-        console.error("Load Error:", err);
-    }
+    } catch (err) { console.error(err); }
 }
 
-function restoreTags(containerId, savedData) {
-    if(!savedData) return;
-    // Handle both JSON string or already parsed array
-    const savedArray = typeof savedData === 'string' ? JSON.parse(savedData) : savedData;
-    
-    const container = document.getElementById(containerId);
+function restoreTags(id, data) {
+    if(!data) return;
+    const arr = typeof data === 'string' ? JSON.parse(data) : data;
+    const container = document.getElementById(id);
     Array.from(container.children).forEach(tag => {
-        if (savedArray.includes(tag.getAttribute('data-val'))) {
-            tag.classList.add('selected');
-        }
+        if(arr.includes(tag.getAttribute('data-val'))) tag.classList.add('selected');
     });
 }
 
-// --- 2. FORM INTERACTION ---
-// Shows/Hides University Dropdown based on Role
 function toggleUniversity(isStudent) {
-    const section = document.getElementById('uniSection');
-    if(isStudent) {
-        section.classList.remove('hidden');
-    } else {
-        section.classList.add('hidden');
-        document.getElementById('selectUni').value = ""; // Reset if switched to traveler
-    }
+    const s = document.getElementById('uniSection');
+    isStudent ? s.classList.remove('hidden') : s.classList.add('hidden');
 }
 
-// SAVE BUTTON Logic
-document.getElementById('profileForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('btnSave');
-    btn.innerText = "Saving...";
-    btn.disabled = true;
-
-    // Collect Form Data
-    const name = document.getElementById('inputName').value;
-    const role = document.querySelector('input[name="role"]:checked').value;
-    const university_id = document.getElementById('selectUni').value;
-    const budget_min = document.getElementById('budgetMin').value;
-    const budget_max = document.getElementById('budgetMax').value;
-    const password = document.getElementById('inputPass').value;
-
-    // Collect Tags
-    const preferred_types = [];
-    document.querySelectorAll('#typeTags .tag-item.selected').forEach(t => preferred_types.push(t.getAttribute('data-val')));
-
-    const preferred_activities = [];
-    document.querySelectorAll('#activityTags .tag-item.selected').forEach(t => preferred_activities.push(t.getAttribute('data-val')));
-
-    const payload = {
-        name, role, university_id, budget_min, budget_max, password,
-        preferred_types, preferred_activities
-    };
-
-    try {
-        const res = await fetch('/api/user/profile', {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        });
-
-        if (res.ok) {
-            alert("✅ Profile Updated!");
-            calendarInstance.refetchEvents(); // Refresh calendar in case University changed
-            fetchUserProfileNav(); // Update navbar
-        } else {
-            const data = await res.json();
-            alert("⚠️ " + (data.error || "Update failed"));
-        }
-    } catch (err) {
-        console.error(err);
-        alert("Network Error");
-    } finally {
-        btn.innerText = "Save Changes";
-        btn.disabled = false;
-    }
-});
-
-// --- 3. CALENDAR LOGIC ---
-function initCalendar() {
-    const calendarEl = document.getElementById('calendar');
-
-    calendarInstance = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        height: 'auto',
-        headerToolbar: { left: 'prev', center: 'title', right: 'next' },
-        events: '/api/user/calendar', // Auto-fetches from our server route
-        
-        // Handle clicking a date to block/unblock
-        dateClick: async function(info) {
-            const dateStr = info.dateStr;
-            const cell = info.dayEl;
-            cell.style.opacity = '0.5'; // Visual feedback
-
-            try {
-                const res = await fetch('/api/user/calendar/toggle', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ date: dateStr })
-                });
-                
-                if(res.ok) {
-                    calendarInstance.refetchEvents(); // Refresh to show/hide grey block
-                }
-            } catch(err) {
-                console.error(err);
-            } finally {
-                cell.style.opacity = '1';
-            }
-        }
-    });
-
-    calendarInstance.render();
-}
-
-// Helper to update Navbar Name/Pic
+// Update Navbar
 async function fetchUserProfileNav() {
     try {
         const res = await fetch('/api/user/profile'); 
         if (res.ok) {
             const user = await res.json();
-            document.getElementById('navUserName').textContent = user.name || "Traveler"; 
+            document.getElementById('navUserName').textContent = user.name; 
             if (user.picture) document.getElementById('navUserImg').src = user.picture;
         }
-    } catch (err) { }
+    } catch (e) {}
 }
+
+// Form Submit
+document.getElementById('profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btnSave');
+    btn.disabled = true; btn.innerText = "Saving...";
+
+    const payload = {
+        name: document.getElementById('inputName').value,
+        role: document.querySelector('input[name="role"]:checked').value,
+        university_id: document.getElementById('selectUni').value,
+        budget_min: document.getElementById('budgetMin').value,
+        budget_max: document.getElementById('budgetMax').value,
+        preferred_types: Array.from(document.querySelectorAll('#typeTags .selected')).map(t=>t.dataset.val),
+        preferred_activities: Array.from(document.querySelectorAll('#activityTags .selected')).map(t=>t.dataset.val)
+    };
+
+    try {
+        await fetch('/api/user/profile', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        alert("Saved!");
+        calendarInstance.refetchEvents();
+    } catch(err) { alert("Error"); }
+    finally { btn.disabled = false; btn.innerText = "Save Changes"; }
+});

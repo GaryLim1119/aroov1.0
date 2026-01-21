@@ -289,14 +289,16 @@ app.get('/api/user/calendar', checkAuthenticated, async (req, res) => {
     let events = [];
 
     try {
-        // A. Fetch Personal Busy Dates
-        const [personalRows] = await db.query("SELECT start_date, end_date, note FROM user_availability WHERE user_id = ?", [userId]);
+        // A. Fetch Personal Busy Dates - UPDATED: Include avail_id
+        const [personalRows] = await db.query("SELECT avail_id, start_date, end_date, note FROM user_availability WHERE user_id = ?", [userId]);
         
         events = events.concat(personalRows.map(r => ({
+            id: r.avail_id, // Needed for deletion
             title: r.note || "Busy",
             start: r.start_date,
             end: r.end_date, 
-            color: "#7f8c8d", // Grey
+            color: "#555", // Grey
+            extendedProps: { type: 'user_busy' },
             display: 'background'
         })));
 
@@ -317,31 +319,67 @@ app.get('/api/user/calendar', checkAuthenticated, async (req, res) => {
 
         res.json(events);
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: "Calendar Error" });
     }
 });
 
-// 5. Toggle Personal Availability (Busy/Free)
+// 5. [LEGACY] Toggle Personal Availability (Single click) - Kept for fallback
 app.post('/api/user/calendar/toggle', checkAuthenticated, async (req, res) => {
     const { date } = req.body; 
     const userId = req.user.id || req.user.user_id;
 
     try {
-        // Check if date is already blocked
         const [existing] = await db.query("SELECT avail_id FROM user_availability WHERE user_id=? AND start_date=?", [userId, date]);
 
         if (existing.length > 0) {
-            // Unblock: Delete row
             await db.query("DELETE FROM user_availability WHERE avail_id=?", [existing[0].avail_id]);
             res.json({ status: "free" });
         } else {
-            // Block: Insert row
             await db.query("INSERT INTO user_availability (user_id, start_date, end_date, note) VALUES (?, ?, ?, ?)", 
                 [userId, date, date, 'Personal Busy']);
             res.json({ status: "busy" });
         }
     } catch (err) {
         res.status(500).json({ error: "Toggle Error" });
+    }
+});
+
+// 6. [NEW] Save Availability Range (Drag & Drop)
+app.post('/api/user/availability', checkAuthenticated, async (req, res) => {
+    const { start_date, end_date, note } = req.body;
+    const userId = req.user.id || req.user.user_id;
+
+    if (!start_date || !end_date) return res.status(400).json({ error: "Dates required" });
+
+    try {
+        await db.query(
+            "INSERT INTO user_availability (user_id, start_date, end_date, note) VALUES (?, ?, ?, ?)",
+            [userId, start_date, end_date, note || "Busy"]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to save availability" });
+    }
+});
+
+// 7. [NEW] Delete Availability Block
+app.delete('/api/user/availability/:id', checkAuthenticated, async (req, res) => {
+    const availId = req.params.id;
+    const userId = req.user.id || req.user.user_id;
+
+    try {
+        // Ensure user can only delete their own records
+        const [result] = await db.query("DELETE FROM user_availability WHERE avail_id = ? AND user_id = ?", [availId, userId]);
+        
+        if (result.affectedRows === 0) {
+            return res.status(403).json({ error: "Unauthorized or not found" });
+        }
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Delete failed" });
     }
 });
 
