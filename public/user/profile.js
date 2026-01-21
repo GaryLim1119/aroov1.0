@@ -125,74 +125,134 @@ document.addEventListener('DOMContentLoaded', function() {
     setupTagGroup('.act-btn', 'activities-input');
 
     // ==========================================
-    // 5. CALENDAR LOGIC (UPDATED: DRAG = FREE, CLICK = BUSY)
+    // 5. CALENDAR LOGIC (SMART TOGGLE VERSION)
     // ==========================================
     const calendarEl = document.getElementById('calendar');
     
     if (calendarEl) {
+        const modal = document.getElementById('event-modal');
+        const modalRange = document.getElementById('modal-date-range');
+        const noteInput = document.getElementById('event-note');
+        const saveAvailBtn = document.getElementById('save-avail-btn');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        
+        // Store selection info globally
+        let currentSelectionInfo = null; 
+
         const calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
-            selectable: true,      // Allows dragging
-            editable: false,       // Disable moving events manually
+            selectable: true,
+            editable: false,
             headerToolbar: { left: 'prev', center: 'title', right: 'next' },
-            events: '/api/user/calendar', // Load events from server
+            events: '/api/user/calendar',
             
-            // 1. DRAG TO SET AVAILABLE (No Modal)
+            // --- SMART SELECT LOGIC ---
             select: async function(info) {
-                // Immediately save as "Available"
-                const start_date = info.startStr;
-                const end_date = info.endStr;
-                
-                try {
-                    const res = await fetch('/api/user/availability', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            start_date: start_date, 
-                            end_date: end_date, 
-                            note: "Available" // Default note
-                        })
-                    });
+                const selStart = info.start;
+                const selEnd = info.end;
 
-                    if (res.ok) {
-                        calendar.refetchEvents(); // Refresh to show green block
-                    } else {
-                        const txt = await res.text();
-                        alert("Error saving: " + txt);
-                    }
-                } catch (err) {
-                    console.error(err);
-                    alert("Network error.");
-                }
-                
-                calendar.unselect();
-            },
+                // 1. Check if we dragged over existing "Available" events
+                const allEvents = calendar.getEvents();
+                const overlappingEvents = allEvents.filter(event => {
+                    // Check if event is 'user_busy' (Your Availability)
+                    if (event.extendedProps.type !== 'user_busy') return false;
 
-            // 2. CLICK TO DELETE (SET BACK TO BUSY)
-            eventClick: async function(info) {
-                // Check if it is a Personal Event (user_busy)
-                if (info.event.extendedProps.type === 'user_busy') { 
-                    // Optional: Ask for confirmation
-                    if (confirm('Set this day back to Busy?')) {
-                        try {
-                            const res = await fetch(`/api/user/availability/${info.event.id}`, { method: 'DELETE' });
-                            
-                            if(res.ok) {
-                                info.event.remove(); // Remove immediately from view
-                            } else {
-                                alert("Could not delete.");
-                            }
-                        } catch(e) { 
-                            console.error(e); 
+                    // Check for Date Overlap
+                    // (Selection Start < Event End) AND (Selection End > Event Start)
+                    return (selStart < event.end && selEnd > event.start);
+                });
+
+                // --- CONDITION A: If we dragged over GREEN -> DELETE IT (Back to Grey) ---
+                if (overlappingEvents.length > 0) {
+                    const confirmDelete = confirm(`Remove availability for these ${overlappingEvents.length} dates?`);
+                    if (confirmDelete) {
+                        for (let event of overlappingEvents) {
+                            try {
+                                await fetch(`/api/user/availability/${event.id}`, { method: 'DELETE' });
+                                event.remove(); // Remove visually
+                            } catch (e) { console.error(e); }
                         }
                     }
+                    calendar.unselect();
+                    return; // Stop here, do not open modal
+                }
+
+                // --- CONDITION B: If we dragged over GREY -> ADD NEW (Modal) ---
+                currentSelectionInfo = info;
+                
+                // Format date text for Modal
+                let endDate = new Date(info.endStr);
+                endDate.setDate(endDate.getDate() - 1); // Adjust visual end date
+                modalRange.innerText = `${info.startStr} to ${endDate.toISOString().split('T')[0]}`;
+                
+                // Reset Note & Show Modal
+                noteInput.value = ''; 
+                modal.classList.remove('hidden');
+            },
+
+            // Click is essentially same as drag-delete now, but good to keep as backup
+            eventClick: async function(info) {
+                if (info.event.extendedProps.type === 'user_busy') { 
+                    if (confirm('Remove this availability slot?')) {
+                        try {
+                            const res = await fetch(`/api/user/availability/${info.event.id}`, { method: 'DELETE' });
+                            if(res.ok) info.event.remove();
+                        } catch(e) { console.error(e); }
+                    }
                 } else {
-                    // It is a University Event
-                    alert("This is a fixed university schedule.");
+                    alert("This is a university schedule.");
                 }
             }
         });
         calendar.render();
+
+        // --- MODAL BUTTON LISTENERS ---
+
+        // 1. Close Modal (Cancel)
+        if(closeModalBtn) {
+            closeModalBtn.addEventListener('click', () => { 
+                modal.classList.add('hidden'); 
+                calendar.unselect(); 
+                currentSelectionInfo = null;
+            });
+        }
+
+        // 2. Save Availability (Confirm)
+        if(saveAvailBtn) {
+            saveAvailBtn.addEventListener('click', async (e) => {
+                e.preventDefault(); 
+                
+                if (!currentSelectionInfo) return;
+
+                saveAvailBtn.innerText = "Saving...";
+                
+                const payload = {
+                    start_date: currentSelectionInfo.startStr,
+                    end_date: currentSelectionInfo.endStr,
+                    note: noteInput.value || "Available"
+                };
+
+                try {
+                    const res = await fetch('/api/user/availability', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if(res.ok) {
+                        calendar.refetchEvents(); // Show the new Green block
+                        modal.classList.add('hidden'); 
+                        currentSelectionInfo = null;
+                    } else {
+                        alert("Error saving.");
+                    }
+                } catch(err) {
+                    console.error("Network Error:", err);
+                } finally {
+                    saveAvailBtn.innerText = "Confirm";
+                }
+            });
+        }
     }
 
     // ==========================================
