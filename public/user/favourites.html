@@ -10,19 +10,24 @@
 <body>
 
 <nav class="navbar">
-    <div class="logo">Aroov.</div>
-    <div class="nav-links">
-        <a href="/user">Explore</a> 
-        <a href="#" class="active">My Favourites</a>
-        <a href="groups.html">My Groups</a>
+    <div class="logo">Aroov Trip.</div>
+
+    <div class="menu-toggle" id="mobile-menu-btn">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
     </div>
 
-    <div style="display:flex; align-items:center; gap:15px;">
-        <div class="profile-chip">
+    <div class="nav-links" id="nav-links-container">
+        <a href="/user" class="active">Explore</a>
+        <a href="/user/favourites.html">Favourites</a>
+        <a href="/user/groups.html">Groups</a>
+
+        <a href="/user/profile.html" class="profile-chip">
             <img src="https://via.placeholder.com/40" id="navUserImg" alt="Profile">
-            <span id="navUserName">Traveler</span>
-        </div>
-        
+            <span id="navUserName">Loading...</span>
+        </a>
+
         <a href="/logout" class="btn-logout">Logout</a>
     </div>
 </nav>
