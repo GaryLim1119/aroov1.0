@@ -409,6 +409,20 @@ function changePage(p) { currentPage = p; loadDestinations(); }
 
 // --- INITIALIZATION ---
 document.addEventListener("DOMContentLoaded", () => {
+
+    // --- REAL-TIME SEARCH LISTENER ---
+    const searchInput = document.getElementById('searchInput');
+    let debounceTimer;
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                currentPage = 1; // Reset to page 1 for new search
+                loadDestinations();
+            }, 500); // Wait 500ms after typing stops to prevent lagging
+        });
+    }
     loadDestinations();
     fetchUserProfile();
 });
