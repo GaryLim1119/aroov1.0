@@ -1,137 +1,128 @@
-// --- 1. GET ALL UNIVERSITIES (For Dropdown) ---
-app.get('/api/universities', async (req, res) => {
-    try {
-        const [rows] = await pool.query("SELECT university_id, name FROM universities ORDER BY name ASC");
-        res.json(rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "DB Error" });
-    }
-});
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Aroov</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+    
+    <link rel="stylesheet" href="style.css"> <link rel="stylesheet" href="profile.css"> </head>
+<body>
 
-// --- 2. GET USER PROFILE ---
-app.get('/api/user/profile', isAuthenticated, async (req, res) => {
-    try {
-        const [rows] = await pool.query(`
-            SELECT user_id, email, name, picture, role, university_id, 
-                   budget_min, budget_max, preferred_types, preferred_activities 
-            FROM users WHERE user_id = ?`, [req.session.user.id]);
-            
-        if (rows.length === 0) return res.status(404).json({ error: "User not found" });
-        res.json(rows[0]);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Server Error" });
-    }
-});
+<nav class="navbar">
+    <div class="logo">Aroov Trip.</div>
+    <div class="menu-toggle" id="mobile-menu-btn">
+        <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+    </div>
+    <div class="nav-links" id="nav-links-container">
+        <a href="/user">Explore</a>
+        <a href="/user/groups.html">Groups</a>
+        <a href="/user/profile.html" class="active profile-chip">
+            <img src="" id="navUserImg" alt="Profile">
+            <span id="navUserName">Loading...</span>
+        </a>
+        <a href="/logout" class="btn-logout">Logout</a>
+    </div>
+</nav>
 
-// --- 3. UPDATE PROFILE ---
-app.put('/api/user/profile', isAuthenticated, async (req, res) => {
-    const { name, role, university_id, budget_min, budget_max, preferred_types, preferred_activities, password } = req.body;
-    const userId = req.session.user.id;
+<div class="profile-container">
+    
+    <div class="profile-card settings-section">
+        <div class="profile-header">
+            <img id="profileAvatar" src="https://via.placeholder.com/100" alt="Avatar">
+            <div>
+                <h2 id="profileNameDisplay">User Name</h2>
+                <p id="profileEmailDisplay">user@example.com</p>
+            </div>
+        </div>
 
-    let passwordSql = "";
-    // Prepare preferences as JSON strings
-    let params = [
-        name, 
-        role, 
-        (role === 'student' ? university_id : null), // Only save Uni ID if role is student
-        budget_min, 
-        budget_max, 
-        JSON.stringify(preferred_types),     
-        JSON.stringify(preferred_activities) 
-    ];
+        <form id="profileForm">
+            <div class="form-group">
+                <label>Display Name</label>
+                <input type="text" id="inputName" required>
+            </div>
 
-    if (password) {
-        // Password Rule: 8+ chars, 1 number, 1 special char
-        const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{8,}$/;
-        if (!passwordRegex.test(password)) {
-            return res.status(400).json({ error: "Password must be 8+ chars, with a number & symbol." });
-        }
-        const hashedPassword = await bcrypt.hash(password, 10);
-        passwordSql = ", password = ?";
-        params.push(hashedPassword);
-    }
+            <div class="form-group">
+                <label>I am a...</label>
+                <div class="role-selector">
+                    <label class="radio-card">
+                        <input type="radio" name="role" value="general" onchange="toggleUniversity(false)">
+                        <span class="radio-label"> Traveler 🌍</span>
+                    </label>
+                    <label class="radio-card">
+                        <input type="radio" name="role" value="student" onchange="toggleUniversity(true)">
+                        <span class="radio-label">Student 🎓</span>
+                    </label>
+                </div>
+            </div>
 
-    params.push(userId); // For WHERE clause
+            <div class="form-group hidden" id="uniSection">
+                <label>Select University</label>
+                <select id="selectUni">
+                    <option value="">-- Loading Universities --</option>
+                </select>
+                <small>Syncs with your academic calendar for semester breaks.</small>
+            </div>
 
-    try {
-        const sql = `UPDATE users SET name=?, role=?, university_id=?, budget_min=?, budget_max=?, preferred_types=?, preferred_activities=? ${passwordSql} WHERE user_id=?`;
-        await pool.query(sql, params);
+            <div class="form-group">
+                <label>Trip Budget Preference (RM)</label>
+                <div class="budget-inputs">
+                    <input type="number" id="budgetMin" placeholder="Min" min="0">
+                    <span style="padding:0 10px;">-</span>
+                    <input type="number" id="budgetMax" placeholder="Max">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Preferred Trip Types</label>
+                <div class="tags-container" id="typeTags">
+                    <div class="tag-item" data-val="Nature">Nature 🌲</div>
+                    <div class="tag-item" data-val="Urban">Urban 🏙️</div>
+                    <div class="tag-item" data-val="Beach">Beach 🏖️</div>
+                    <div class="tag-item" data-val="Historical">Historical 🏛️</div>
+                    <div class="tag-item" data-val="Adventure">Adventure 🧗</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Preferred Activities</label>
+                <div class="tags-container" id="activityTags">
+                    <div class="tag-item" data-val="Hiking">Hiking 🥾</div>
+                    <div class="tag-item" data-val="Food">Food Hunting 🍜</div>
+                    <div class="tag-item" data-val="Shopping">Shopping 🛍️</div>
+                    <div class="tag-item" data-val="Relaxing">Relaxing 💆</div>
+                    <div class="tag-item" data-val="Photography">Photography 📸</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>New Password (Optional)</label>
+                <input type="password" id="inputPass" placeholder="Leave blank to keep current">
+                <small>Must contain 8+ chars, 1 number, 1 symbol (!@#$).</small>
+            </div>
+
+            <button type="submit" class="btn-save" id="btnSave">Save Changes</button>
+        </form>
+    </div>
+
+    <div class="profile-card calendar-section">
+        <h3>📅 Your Availability</h3>
         
-        // Update Session to reflect new name/role immediately
-        req.session.user.name = name;
-        if(role) req.session.user.role = role;
+        <div class="cal-legend">
+            <div><span class="dot dot-green"></span> Sem Break (Uni)</div>
+            <div><span class="dot dot-red"></span> Exam (Uni)</div>
+            <div><span class="dot dot-grey"></span> Busy (You)</div>
+        </div>
 
-        res.json({ message: "Profile updated successfully" });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Update failed" });
-    }
-});
-
-// --- 4. CALENDAR DATA (The Smart Logic) ---
-app.get('/api/user/calendar', isAuthenticated, async (req, res) => {
-    const userId = req.session.user.id;
-    let events = [];
-
-    try {
-        // A. Fetch Personal Busy Dates (From user_availability)
-        const [personalRows] = await pool.query("SELECT start_date, end_date, note FROM user_availability WHERE user_id = ?", [userId]);
+        <p class="cal-instruction">Click any date to toggle it as <strong>Busy</strong> or <strong>Free</strong>.</p>
         
-        events = events.concat(personalRows.map(r => ({
-            title: r.note || "Busy",
-            start: r.start_date,
-            end: r.end_date, 
-            color: "#7f8c8d", // Grey for personal
-            display: 'background'
-        })));
+        <div id="calendar"></div>
+    </div>
 
-        // B. Fetch University Events (If user is a student)
-        const [userRows] = await pool.query("SELECT university_id FROM users WHERE user_id = ?", [userId]);
-        const uniId = userRows[0]?.university_id;
+</div>
 
-        if (uniId) {
-            // Join with university_schedules to get semester dates
-            const [uniRows] = await pool.query("SELECT event_name, start_date, end_date, type FROM university_schedules WHERE university_id = ?", [uniId]);
-            
-            events = events.concat(uniRows.map(r => ({
-                title: r.event_name,
-                start: r.start_date,
-                end: r.end_date,
-                // Green for breaks, Red for exams
-                color: r.type === 'semester_break' ? "#2ecc71" : "#e74c3c" 
-            })));
-        }
-
-        res.json(events);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Calendar Error" });
-    }
-});
-
-// --- 5. TOGGLE PERSONAL AVAILABILITY ---
-app.post('/api/user/calendar/toggle', isAuthenticated, async (req, res) => {
-    const { date } = req.body; 
-    const userId = req.session.user.id;
-
-    try {
-        // Check if date is already blocked
-        const [existing] = await pool.query("SELECT avail_id FROM user_availability WHERE user_id=? AND start_date=?", [userId, date]);
-
-        if (existing.length > 0) {
-            // Unblock: Delete row
-            await pool.query("DELETE FROM user_availability WHERE avail_id=?", [existing[0].avail_id]);
-            res.json({ status: "free" });
-        } else {
-            // Block: Insert row
-            await pool.query("INSERT INTO user_availability (user_id, start_date, end_date, note) VALUES (?, ?, ?, ?)", 
-                [userId, date, date, 'Personal Busy']);
-            res.json({ status: "busy" });
-        }
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Toggle Error" });
-    }
-});
+<script src="profile.js"></script>
+</body>
+</html>
