@@ -92,6 +92,19 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({ storage: storage });
 
+function isAuthenticated(req, res, next) {
+    // Check if user is logged in via session
+    if (req.session && req.session.user) {
+        return next();
+    }
+    // If this is an API request (starts with /api/), send JSON error
+    if (req.path.startsWith('/api/')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    // Otherwise redirect to login page
+    res.redirect('/login');
+}
+
 // =========================================================
 // --- PASSPORT CONFIG ---
 // =========================================================
@@ -907,6 +920,8 @@ app.delete('/api/user/availability/:id', isAuthenticated, async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
+
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
