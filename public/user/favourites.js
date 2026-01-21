@@ -2,7 +2,7 @@
 
 // 1. GLOBAL VARIABLES
 let currentItemToShare = null; 
-let allFavouritesData = []; // Store all data here so we don't have to pass it in HTML
+let allFavouritesData = []; 
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchUserProfile(); 
@@ -61,7 +61,6 @@ function renderGrid(data) {
         const destId = item.dest_id || item.id;
         const priceDisplay = item.price_min > 0 ? `RM${item.price_min} - ${item.price_max}` : 'Free';
 
-        // NOTICE: We only pass the ID now ('${destId}'), not the whole object.
         return `
         <div class="card" id="card-${destId}">
             <div class="card-image-wrapper">
@@ -117,9 +116,7 @@ async function removeFavourite(btn, itemId) {
                 
                 setTimeout(() => {
                     card.remove();
-                    // Update global data to match UI
                     allFavouritesData = allFavouritesData.filter(i => (i.dest_id || i.id) != itemId);
-                    
                     const grid = document.getElementById('favGrid');
                     if(grid.querySelectorAll('.card').length === 0) {
                          loadFavourites(); 
@@ -137,7 +134,6 @@ async function removeFavourite(btn, itemId) {
 // --- SHARE MODAL LOGIC ---
 
 function openShareModal(id) {
-    // Look up the full object using the ID
     currentItemToShare = getItemById(id);
     
     if (!currentItemToShare) {
@@ -249,19 +245,17 @@ async function addToGroup(groupId, btnElement) {
     }
 }
 
-// --- DETAILS MODAL ---
+// --- DETAILS MODAL (Updated with Activities) ---
 const detailModal = document.getElementById('detailModal');
 const modalContent = document.getElementById('modalContentInject');
 
 function openModal(id) {
     if(!detailModal || !modalContent) return;
 
-    // Look up data by ID instead of parsing string
     const dest = getItemById(id);
     if (!dest) return;
 
     const imgUrl = dest.images || 'https://via.placeholder.com/800x450';
-    // Fixed the Map URL syntax
     const mapQuery = encodeURIComponent(`${dest.name} ${dest.state} Malaysia`);
     const mapUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
 
@@ -275,8 +269,16 @@ function openModal(id) {
                     <span style="background:#eee; padding:4px 8px; border-radius:4px; font-size:12px; text-transform:uppercase; font-weight:bold; color:#555;">${dest.type}</span>
                     <span style="margin-left:5px; color:#777; font-size:14px;">📍 ${dest.state}</span>
                     <h1 class="modal-title" style="margin-top:10px; font-size:28px;">${dest.name}</h1>
-                    <p class="modal-desc" style="margin-top:15px; line-height:1.6; color:#444;">${dest.description || "No description available."}</p>
+                    
+                    <h4 style="margin-top:20px; margin-bottom:5px; font-size:14px; color:#888; text-transform:uppercase;">About</h4>
+                    <p class="modal-desc" style="line-height:1.6; color:#444;">${dest.description || "No description available."}</p>
+
+                    <h4 style="margin-top:20px; margin-bottom:5px; font-size:14px; color:#888; text-transform:uppercase;">Activities</h4>
+                    <p style="color:#444; line-height: 1.6;">
+                        ${dest.activities || "Sightseeing, Photography, Relaxation"}
+                    </p>
                 </div>
+
                 <div class="modal-sidebar" style="flex:1; min-width:200px;">
                     <div style="border:1px solid #eee; padding:15px; border-radius:8px; text-align:center; box-shadow:0 2px 10px rgba(0,0,0,0.05);">
                         <div style="font-size:12px; color:#888; text-transform:uppercase;">Estimated Cost</div>
