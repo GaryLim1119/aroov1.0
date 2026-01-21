@@ -8,14 +8,21 @@
   <link rel="stylesheet" href="/official/official.css" />
 </head>
 <body>
-  <nav>
-    <div class="nav-logo">Aroov</div>
-    <ul class="nav-links">
-      <li><a href="javascript:void(0)" onclick="document.getElementById('attractions').scrollIntoView({behavior: 'smooth'})">Attractions</a></li>
-      <li><a href="#explore">Explore</a></li>
-      <li><a href="/login" class="cta-button" style="padding: 10px 20px;">Login</a></li>
-    </ul>
-  </nav>
+<nav>
+  <div class="nav-logo">Aroov</div>
+  
+  <div class="menu-toggle" id="mobile-menu">
+    <span class="bar"></span>
+    <span class="bar"></span>
+    <span class="bar"></span>
+  </div>
+
+  <ul class="nav-links">
+    <li><a href="javascript:void(0)" onclick="document.getElementById('attractions').scrollIntoView({behavior: 'smooth'}); closeMenu()">Attractions</a></li>
+    <li><a href="#explore" onclick="closeMenu()">Explore</a></li>
+    <li><a href="/login" class="cta-button mobile-login">Login</a></li>
+  </ul>
+</nav>
 
   <section class="hero">
     <h1>Malaysia</h1>

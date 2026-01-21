@@ -3,6 +3,41 @@ document.addEventListener('DOMContentLoaded', () => {
     setupModalListeners();
 });
 
+
+// Mobile Menu Toggle Logic
+const menuToggle = document.querySelector('#mobile-menu');
+const navLinks = document.querySelector('.nav-links');
+
+menuToggle.addEventListener('click', () => {
+    // Toggle the menu opening/closing
+    navLinks.classList.toggle('active');
+    
+    // Optional: Animate the hamburger icon into an 'X'
+    const bars = document.querySelectorAll('.bar');
+    if (navLinks.classList.contains('active')) {
+        bars[0].style.transform = 'translateY(8px) rotate(45deg)';
+        bars[1].style.opacity = '0';
+        bars[2].style.transform = 'translateY(-8px) rotate(-45deg)';
+    } else {
+        bars[0].style.transform = 'none';
+        bars[1].style.opacity = '1';
+        bars[2].style.transform = 'none';
+    }
+});
+
+// Helper function to close menu when a link is clicked
+function closeMenu() {
+    if (window.innerWidth <= 768) {
+        navLinks.classList.remove('active');
+        // Reset icon
+        const bars = document.querySelectorAll('.bar');
+        bars[0].style.transform = 'none';
+        bars[1].style.opacity = '1';
+        bars[2].style.transform = 'none';
+    }
+}
+
+
 // --- 1. FETCH AND RENDER DATA ---
 async function loadDestinations() {
     try {
