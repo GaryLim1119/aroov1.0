@@ -16,12 +16,21 @@
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #ff5a5f; border-radius: 4px; }
         
-        /* Modal Transition */
+        /* Transitions */
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
+        .slide-enter-active, .slide-leave-active { transition: transform 0.3s ease-out; }
+        .slide-enter-from, .slide-leave-to { transform: translateY(-20px); opacity: 0; }
+
+        /* Calendar Mobile Tweaks */
+        @media (max-width: 768px) {
+            .fc-toolbar { flex-direction: column; gap: 0.5rem; }
+            .fc-toolbar-title { font-size: 1.2rem !important; }
+            .fc-view-harness { min-height: 400px; }
+        }
     </style>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-50 font-sans">
 
     <div id="app">
 
@@ -31,18 +40,41 @@
                     <div class="flex items-center">
                         <span class="text-2xl font-bold text-[#ff5a5f]">Aroov Trip</span>
                     </div>
-                    <div class="flex items-center space-x-4">
-                        <a href="#" class="text-gray-900 font-medium">Explore</a>
-                        <a href="#" class="text-gray-500 hover:text-gray-900">Favourites</a>
-                        <a href="groups.html" class="text-gray-500 hover:text-gray-900">Groups</a>
-                        <div class="flex items-center space-x-2" v-if="user">
-                            <img :src="user.picture" class="h-8 w-8 rounded-full border border-gray-200">
+
+                    <div class="hidden md:flex items-center space-x-6">
+                        <a href="/user" class="text-gray-900 font-medium border-b-2 border-[#ff5a5f]">Profile</a>
+                        <a href="/user/groups.html" class="text-gray-500 hover:text-gray-900 transition">Groups</a>
+                        <div class="flex items-center space-x-2 pl-4 border-l border-gray-200">
+                            <img :src="user.picture || 'https://via.placeholder.com/40'" class="h-8 w-8 rounded-full border border-gray-200 object-cover">
                             <span class="text-sm font-medium text-gray-700">{{ user.name }}</span>
                         </div>
-                        <a href="/logout" class="text-sm text-[#ff5a5f] hover:text-red-700">Logout</a>
+                        <a href="/logout" class="text-sm text-[#ff5a5f] hover:text-red-700 font-medium">Logout</a>
+                    </div>
+
+                    <div class="flex items-center md:hidden">
+                        <button @click="mobileMenuOpen = !mobileMenuOpen" class="text-gray-600 hover:text-[#ff5a5f] focus:outline-none p-2">
+                            <i class="fa-solid fa-bars text-xl"></i>
+                        </button>
                     </div>
                 </div>
             </div>
+
+            <Transition name="slide">
+                <div v-if="mobileMenuOpen" class="md:hidden bg-white border-t border-gray-100 shadow-lg absolute w-full left-0 z-50">
+                    <div class="px-4 py-3 space-y-3">
+                        <div class="flex items-center space-x-3 pb-3 border-b border-gray-100">
+                            <img :src="user.picture || 'https://via.placeholder.com/40'" class="h-10 w-10 rounded-full border border-gray-200">
+                            <div>
+                                <p class="font-medium text-gray-900">{{ user.name }}</p>
+                                <p class="text-xs text-gray-500">{{ user.email }}</p>
+                            </div>
+                        </div>
+                        <a href="/user" class="block text-[#ff5a5f] font-medium">Profile</a>
+                        <a href="/user/groups.html" class="block text-gray-600 hover:text-gray-900">Groups</a>
+                        <a href="/logout" class="block text-red-500 font-medium">Logout</a>
+                    </div>
+                </div>
+            </Transition>
         </nav>
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -50,127 +82,173 @@
                 
                 <div class="space-y-6">
                     <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                        <div class="flex items-center space-x-4 mb-6">
-                            <img :src="user.picture" class="h-20 w-20 rounded-full object-cover border-4 border-white shadow-md">
-                            <div>
-                                <h2 class="text-xl font-bold text-gray-900">{{ user.name }}</h2>
-                                <p class="text-sm text-gray-500">{{ user.email }}</p>
-                            </div>
-                        </div>
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Edit Profile</h2>
 
                         <div class="space-y-4">
                             <div>
-                                <label class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Display Name</label>
-                                <input v-model="form.name" type="text" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#ff5a5f] focus:border-transparent outline-none transition">
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Display Name</label>
+                                <input v-model="form.name" type="text" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#ff5a5f] outline-none">
                             </div>
 
                             <div>
-                                <label class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">I am a...</label>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Role</label>
                                 <div class="flex bg-gray-100 p-1 rounded-lg">
-                                    <button @click="form.role = 'student'" :class="{'bg-white shadow-sm text-[#ff5a5f]': form.role === 'student', 'text-gray-500': form.role !== 'student'}" class="flex-1 py-1.5 text-sm font-medium rounded-md transition-all">Student 🎓</button>
-                                    <button @click="form.role = 'traveller'" :class="{'bg-white shadow-sm text-[#ff5a5f]': form.role === 'traveller', 'text-gray-500': form.role !== 'traveller'}" class="flex-1 py-1.5 text-sm font-medium rounded-md transition-all">Traveller ✈️</button>
+                                    <button @click="form.role = 'student'" :class="{'bg-white shadow-sm text-[#ff5a5f] font-bold': form.role === 'student', 'text-gray-500': form.role !== 'student'}" class="flex-1 py-2 text-sm rounded-md transition-all">Student 🎓</button>
+                                    <button @click="form.role = 'traveller'" :class="{'bg-white shadow-sm text-[#ff5a5f] font-bold': form.role === 'traveller', 'text-gray-500': form.role !== 'traveller'}" class="flex-1 py-2 text-sm rounded-md transition-all">Traveller ✈️</button>
                                 </div>
                             </div>
 
-                            <div v-if="form.role === 'student'">
-                                <label class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Select University</label>
+                            <div v-if="form.role === 'student'" class="transition-all">
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">University</label>
                                 <select v-model="form.university_id" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#ff5a5f] outline-none">
-                                    <option :value="null">Select University</option>
+                                    <option :value="null">Select University...</option>
                                     <option v-for="uni in universities" :key="uni.university_id" :value="uni.university_id">{{ uni.name }}</option>
                                 </select>
                             </div>
 
-                            <button @click="updateProfile" class="w-full bg-[#ff5a5f] text-white font-medium py-2.5 rounded-lg shadow-sm hover:bg-[#ff4449] transition active:scale-95">
-                                Save Changes
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Trip Budget (RM)</label>
+                                <div class="flex gap-2">
+                                    <input v-model="form.budget_min" type="number" placeholder="Min" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-center">
+                                    <input v-model="form.budget_max" type="number" placeholder="Max" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-center">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Interests</label>
+                                <div class="flex flex-wrap gap-2">
+                                    <span v-for="type in tripTypes" :key="type" 
+                                          @click="togglePreference('preferred_types', type)"
+                                          :class="form.preferred_types.includes(type) ? 'bg-[#ff5a5f] text-white' : 'bg-gray-100 text-gray-600'"
+                                          class="px-3 py-1 rounded-full text-xs cursor-pointer select-none transition">
+                                        {{ type }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <button @click="updateProfile" class="w-full bg-[#ff5a5f] text-white font-bold py-3 rounded-lg shadow-sm hover:bg-[#ff4449] active:scale-95 transition">
+                                Save Profile
                             </button>
                         </div>
                     </div>
                 </div>
 
                 <div class="lg:col-span-2">
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                        <div class="flex items-center justify-between mb-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                             <div>
-                                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                                    <i class="fa-regular fa-calendar-check text-[#ff5a5f]"></i> Your Schedule
-                                </h3>
-                                <div class="flex gap-4 mt-2 text-xs">
-                                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#2ecc71]"></span> Semester Break</span>
-                                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#e74c3c]"></span> Uni Event</span>
-                                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#555]"></span> My Busy Dates</span>
+                                <h3 class="text-lg font-bold text-gray-900">Availability Calendar</h3>
+                                <div class="flex gap-3 mt-1 text-xs text-gray-500">
+                                    <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-[#2ecc71]"></div> Available</span>
+                                    <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-[#ff5a5f]"></div> Uni Event</span>
                                 </div>
                             </div>
-                            <div class="text-xs text-gray-400 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
-                                <p><strong>Drag</strong> across dates to mark them as Busy.</p>
-                                <p><strong>Click</strong> a grey event to remove it.</p>
+                            <div class="bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-xs w-full sm:w-auto border border-blue-100">
+                                <i class="fa-solid fa-circle-info mr-1"></i>
+                                <span class="hidden md:inline">Click and drag to mark dates.</span>
+                                <span class="md:hidden"><strong>Long press</strong> and drag to mark dates.</span>
                             </div>
                         </div>
 
-                        <div id='calendar' class="text-sm"></div>
+                        <div id='calendar' class="text-sm min-h-[400px]"></div>
                     </div>
                 </div>
 
             </div>
         </div>
 
-        <div v-if="showModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white rounded-xl shadow-xl p-6 w-96 transform transition-all scale-100">
-                <h3 class="text-lg font-bold text-gray-900 mb-2">Mark Availability</h3>
-                <p class="text-sm text-gray-500 mb-4">You selected: <span class="font-medium text-gray-800">{{ selectedDateRange }}</span></p>
-                
-                <label class="block text-xs font-medium text-gray-400 uppercase mb-1">Note (Optional)</label>
-                <input v-model="busyNote" type="text" placeholder="e.g. Part-time job, Family event" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-[#ff5a5f]">
+        <Transition name="fade">
+            <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+                <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm transform transition-all">
+                    <div class="text-center mb-4">
+                        <div class="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
+                            <i class="fa-solid fa-calendar-check text-green-600 text-xl"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900">Mark as Available?</h3>
+                        <p class="text-sm text-gray-500 mt-1">{{ selectedDateDisplay }}</p>
+                    </div>
 
-                <div class="flex gap-3">
-                    <button @click="closeModal" class="flex-1 px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
-                    <button @click="saveAvailability" class="flex-1 px-4 py-2 bg-[#ff5a5f] text-white rounded-lg text-sm font-medium hover:bg-[#ff4449] transition shadow-sm">Mark as Busy</button>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1 text-left">Note (Optional)</label>
+                    <input v-model="availabilityNote" type="text" placeholder="e.g. Free after 2pm" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-5 focus:outline-none focus:border-[#ff5a5f]">
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <button @click="closeModal" class="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg font-medium hover:bg-gray-50">Cancel</button>
+                        <button @click="saveAvailability" class="px-4 py-2 bg-[#2ecc71] text-white rounded-lg font-medium hover:bg-green-600 shadow-sm">Confirm</button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </Transition>
 
-    </div> <script>
+    </div>
+
+    <script>
         const { createApp } = Vue;
 
         createApp({
             data() {
                 return {
-                    user: { name: '', picture: '', email: '' },
+                    mobileMenuOpen: false,
+                    user: { name: '', email: '', picture: '' },
+                    universities: [],
+                    
+                    // Form Data
                     form: {
                         name: '',
                         role: 'student',
                         university_id: null,
+                        budget_min: null,
+                        budget_max: null,
+                        preferred_types: []
                     },
-                    universities: [],
-                    calendar: null,
                     
-                    // Modal State
+                    // Static Data
+                    tripTypes: ['Nature', 'Urban', 'Beach', 'History', 'Food', 'Adventure'],
+
+                    // Calendar
+                    calendar: null,
                     showModal: false,
-                    selectionInfo: null,
-                    busyNote: '',
-                    selectedDateRange: ''
+                    selectedInfo: null,
+                    selectedDateDisplay: '',
+                    availabilityNote: ''
                 }
             },
             async mounted() {
-                await this.fetchUniversities();
-                await this.fetchProfile();
+                await this.loadData();
                 this.initCalendar();
             },
             methods: {
-                async fetchUniversities() {
-                    const res = await fetch('/api/universities');
-                    this.universities = await res.json();
-                },
-                async fetchProfile() {
+                async loadData() {
+                    // Fetch Unis
                     try {
-                        const res = await fetch('/api/user/profile');
-                        if (!res.ok) throw new Error('Failed');
+                        let res = await fetch('/api/universities');
+                        this.universities = await res.json();
+                    } catch(e) {}
+
+                    // Fetch Profile
+                    try {
+                        let res = await fetch('/api/user/profile');
+                        if(res.status === 401) return window.location.href = '/login';
                         const data = await res.json();
                         this.user = data;
-                        this.form = { ...data };
-                    } catch (e) {
-                        window.location.href = '/login';
-                    }
+                        
+                        // Populate Form
+                        this.form = {
+                            name: data.name,
+                            role: data.role || 'student',
+                            university_id: data.university_id,
+                            budget_min: data.budget_min,
+                            budget_max: data.budget_max,
+                            preferred_types: data.preferred_types || []
+                        };
+                    } catch(e) {}
                 },
+
+                togglePreference(key, val) {
+                    const idx = this.form[key].indexOf(val);
+                    if (idx === -1) this.form[key].push(val);
+                    else this.form[key].splice(idx, 1);
+                },
+
                 async updateProfile() {
                     try {
                         const res = await fetch('/api/user/profile', {
@@ -178,40 +256,50 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(this.form)
                         });
-                        if (res.ok) alert('Profile updated!');
-                    } catch (e) {
-                        alert('Error updating profile');
-                    }
+                        if(res.ok) {
+                            alert("Profile Saved!");
+                            this.calendar.refetchEvents(); // Refresh in case uni changed
+                        }
+                    } catch(e) { alert("Error saving"); }
                 },
-                
+
                 // --- CALENDAR LOGIC ---
                 initCalendar() {
                     const calendarEl = document.getElementById('calendar');
                     this.calendar = new FullCalendar.Calendar(calendarEl, {
                         initialView: 'dayGridMonth',
                         headerToolbar: {
-                            left: 'prev,next today',
-                            center: 'title',
-                            right: ''
+                            left: 'prev', center: 'title', right: 'next'
                         },
                         selectable: true,
+                        selectLongPressDelay: 300, // Helps with touch devices (300ms hold to drag)
                         editable: false,
+                        height: 'auto',
                         events: '/api/user/calendar',
-                        
-                        // 1. Trigger Modal on Select
+
+                        // 1. Drag to Select (Touch & Mouse)
                         select: (info) => {
-                            this.selectionInfo = info;
-                            this.selectedDateRange = `${info.startStr} to ${info.endStr}`;
-                            this.busyNote = '';
-                            this.showModal = true; // Opens the modal
+                            this.selectedInfo = info;
+                            
+                            // Format date for display
+                            const start = new Date(info.startStr).toLocaleDateString(undefined, {month:'short', day:'numeric'});
+                            // End date is exclusive in FC, so we subtract 1 day for visual
+                            let endDate = new Date(info.endStr);
+                            endDate.setDate(endDate.getDate() - 1);
+                            const end = endDate.toLocaleDateString(undefined, {month:'short', day:'numeric'});
+                            
+                            this.selectedDateDisplay = (start === end) ? start : `${start} - ${end}`;
+                            this.availabilityNote = '';
+                            this.showModal = true;
                         },
-                        
-                        // 2. Delete on Click
+
+                        // 2. Click to Delete
                         eventClick: async (info) => {
-                            if (info.event.extendedProps.type === 'user_busy') {
-                                if(confirm('Remove this busy slot?')) {
+                            // Assuming 'user_avail' is the green event type from backend
+                            if (info.event.extendedProps.type === 'user_avail' || info.event.backgroundColor === '#2ecc71') {
+                                if(confirm("Delete this available slot?")) {
                                     await fetch(`/api/user/availability/${info.event.id}`, { method: 'DELETE' });
-                                    this.calendar.refetchEvents();
+                                    info.event.remove();
                                 }
                             }
                         }
@@ -221,32 +309,27 @@
 
                 closeModal() {
                     this.showModal = false;
-                    if(this.calendar) this.calendar.unselect();
+                    this.calendar.unselect();
                 },
 
                 async saveAvailability() {
-                    if (!this.selectionInfo) return;
-
                     try {
                         const res = await fetch('/api/user/availability', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                start_date: this.selectionInfo.startStr,
-                                end_date: this.selectionInfo.endStr, // FullCalendar end date is exclusive, but our backend handles ranges generally
-                                note: this.busyNote
+                                start_date: this.selectedInfo.startStr,
+                                end_date: this.selectedInfo.endStr, // Send as-is (exclusive)
+                                note: this.availabilityNote
                             })
                         });
 
-                        if (res.ok) {
+                        if(res.ok) {
                             this.calendar.refetchEvents();
                             this.closeModal();
-                        } else {
-                            alert("Failed to save.");
                         }
-                    } catch (e) {
-                        console.error(e);
-                        alert("Error saving availability.");
+                    } catch(e) {
+                        alert("Failed to save");
                     }
                 }
             }

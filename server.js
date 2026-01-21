@@ -823,5 +823,90 @@ app.get('/api/user/me', async (req, res) => {
     }
 });
 
+// GET: Fetch Calendar Events (Uni Events + User Availability)
+app.get('/api/user/calendar', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const universityId = req.session.user.university_id; // Assuming stored in session
+
+        // 1. Get User's "Available" slots
+        const [avail] = await db.query(
+            `SELECT id, start_date, end_date, note FROM user_availability WHERE user_id = ?`, 
+            [userId]
+        );
+
+        // 2. Get University Events (if user is student)
+        let uniEvents = [];
+        if (universityId) {
+            const [events] = await db.query(
+                `SELECT event_name, start_date, end_date FROM university_schedules WHERE university_id = ?`, 
+                [universityId]
+            );
+            uniEvents = events.map(e => ({
+                title: `Uni: ${e.event_name}`,
+                start: e.start_date,
+                end: e.end_date,
+                color: '#ff5a5f', // Red for Uni Events
+                display: 'block'
+            }));
+        }
+
+        // 3. Format User Availability for FullCalendar
+        const userEvents = avail.map(a => ({
+            id: a.id,
+            title: a.note || 'Available',
+            start: a.start_date,
+            end: a.end_date,
+            color: '#2ecc71', // Green for Available
+            type: 'user_avail' // Custom prop to identify logic in frontend
+        }));
+
+        // Combine and send
+        res.json([...uniEvents, ...userEvents]);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+// POST: Save "Available" Date Range
+app.post('/api/user/availability', isAuthenticated, async (req, res) => {
+    try {
+        const { start_date, end_date, note } = req.body;
+        const userId = req.session.user.id;
+
+        await db.query(
+            `INSERT INTO user_availability (user_id, start_date, end_date, note, type) VALUES (?, ?, ?, ?, 'available')`,
+            [userId, start_date, end_date, note]
+        );
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to save" });
+    }
+});
+
+// DELETE: Remove an Availability Slot
+app.delete('/api/user/availability/:id', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const availId = req.params.id;
+
+        // Ensure user owns this slot before deleting
+        const [result] = await db.query(
+            `DELETE FROM user_availability WHERE id = ? AND user_id = ?`,
+            [availId, userId]
+        );
+
+        if (result.affectedRows === 0) return res.status(403).json({ error: "Unauthorized" });
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
