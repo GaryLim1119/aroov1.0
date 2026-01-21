@@ -3,24 +3,17 @@ let selectedDates = null; // Store dates from drag selection
 
 document.addEventListener('DOMContentLoaded', function() {
     
-    // ==========================================
-    // 1. MOBILE MENU TOGGLE (Matches your Navbar)
-    // ==========================================
+    // --- 1. MOBILE MENU ---
     const menuBtn = document.getElementById('mobile-menu-btn');
     const navLinks = document.getElementById('nav-links-container');
-    const navUserImg = document.getElementById('navUserImg');
-    const navUserName = document.getElementById('navUserName');
-
-    if (menuBtn && navLinks) {
+    if (menuBtn) {
         menuBtn.addEventListener('click', () => {
-            navLinks.classList.toggle('active'); // Toggles the slide-down menu
-            menuBtn.classList.toggle('is-active'); // Toggles the X animation
+            navLinks.classList.toggle('active');
+            menuBtn.classList.toggle('is-active');
         });
     }
 
-    // ==========================================
-    // 2. MODERN UNIVERSITY SELECT (Searchable Div)
-    // ==========================================
+    // --- 2. UNIVERSITY SELECT (Modern) ---
     const uniTrigger = document.getElementById('uni-dropdown-trigger');
     const uniList = document.getElementById('uni-dropdown-list');
     const uniSearch = document.getElementById('uni-search');
@@ -28,7 +21,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const uniHiddenInput = document.getElementById('university-id');
     const uniDisplayText = document.getElementById('uni-selected-text');
 
-    // Example List - In a real app, you might fetch this from /api/universities
     const universities = [
         { id: 1, name: "Taylor's University" },
         { id: 2, name: "Sunway University" },
@@ -37,266 +29,217 @@ document.addEventListener('DOMContentLoaded', function() {
         { id: 5, name: "University of Malaya (UM)" },
         { id: 6, name: "UCSI University" },
         { id: 7, name: "UiTM" },
-        { id: 8, name: "University of Nottingham" }
+        { id: 8, name: "Nottingham University" }
     ];
 
-    function renderUniversities(filterText = '') {
+    function renderUniversities(filter = '') {
         uniContainer.innerHTML = '';
-        const filtered = universities.filter(u => 
-            u.name.toLowerCase().includes(filterText.toLowerCase())
-        );
-        
+        const filtered = universities.filter(u => u.name.toLowerCase().includes(filter.toLowerCase()));
         filtered.forEach(uni => {
             const div = document.createElement('div');
-            div.className = 'uni-option'; // Matches CSS
+            div.className = 'uni-option';
             div.textContent = uni.name;
-            div.onclick = () => selectUniversity(uni.id, uni.name);
+            div.onclick = () => {
+                uniHiddenInput.value = uni.id;
+                uniDisplayText.textContent = uni.name;
+                uniDisplayText.classList.add('text-gray-800', 'font-medium');
+                uniList.classList.add('hidden');
+            };
             uniContainer.appendChild(div);
         });
-
-        if (filtered.length === 0) {
-            uniContainer.innerHTML = '<div class="p-3 text-sm text-gray-400 text-center">No results found</div>';
-        }
+        if(filtered.length === 0) uniContainer.innerHTML = '<div class="p-3 text-center text-gray-400 text-sm">No results</div>';
     }
 
-    function selectUniversity(id, name) {
-        uniHiddenInput.value = id;
-        uniDisplayText.textContent = name;
-        uniDisplayText.classList.remove('text-gray-500');
-        uniDisplayText.classList.add('text-gray-800', 'font-medium');
-        uniList.classList.add('hidden'); // Close dropdown
-    }
-
-    // Toggle Dropdown
-    if (uniTrigger) {
+    if(uniTrigger) {
         uniTrigger.addEventListener('click', (e) => {
             e.stopPropagation();
             uniList.classList.toggle('hidden');
-            if (!uniList.classList.contains('hidden')) {
-                uniSearch.value = '';
-                renderUniversities();
-                uniSearch.focus();
-            }
+            if(!uniList.classList.contains('hidden')) { uniSearch.value=''; renderUniversities(); uniSearch.focus(); }
+        });
+    }
+    document.addEventListener('click', () => { if(uniList) uniList.classList.add('hidden'); });
+    if(uniSearch) {
+        uniSearch.addEventListener('click', (e) => e.stopPropagation());
+        uniSearch.addEventListener('input', (e) => renderUniversities(e.target.value));
+    }
+
+    // --- 3. TAGS LOGIC (Separated Types & Activities) ---
+    
+    // Helper to setup toggle logic
+    function setupTagGroup(btnClass, inputId) {
+        const btns = document.querySelectorAll(btnClass);
+        const input = document.getElementById(inputId);
+        btns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.classList.toggle('selected');
+                const selected = Array.from(document.querySelectorAll(`${btnClass}.selected`)).map(b => b.dataset.val);
+                input.value = selected.join(',');
+            });
         });
     }
 
-    // Close when clicking outside
-    document.addEventListener('click', () => {
-        if(uniList) uniList.classList.add('hidden');
-    });
-    if(uniSearch) uniSearch.addEventListener('click', (e) => e.stopPropagation());
-    if(uniSearch) uniSearch.addEventListener('input', (e) => renderUniversities(e.target.value));
+    setupTagGroup('.type-btn', 'types-input');       // For Preferred Types
+    setupTagGroup('.act-btn', 'activities-input');   // For Preferred Activities
 
 
-    // ==========================================
-    // 3. ACTIVITY TAGS LOGIC
-    // ==========================================
-    const tagBtns = document.querySelectorAll('.tag-btn');
-    const activitiesInput = document.getElementById('activities-input');
-
-    tagBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            btn.classList.toggle('selected'); // Matches CSS .selected
-            updateActivitiesInput();
-        });
-    });
-
-    function updateActivitiesInput() {
-        // Gather all selected data-val attributes
-        const selected = Array.from(document.querySelectorAll('.tag-btn.selected'))
-                              .map(btn => btn.dataset.val);
-        activitiesInput.value = selected.join(',');
-    }
-
-    // ==========================================
-    // 4. CALENDAR & AVAILABILITY
-    // ==========================================
+    // --- 4. CALENDAR LOGIC ---
     const calendarEl = document.getElementById('calendar');
     const modal = document.getElementById('event-modal');
     const modalRange = document.getElementById('modal-date-range');
     const noteInput = document.getElementById('event-note');
     const saveAvailBtn = document.getElementById('save-avail-btn');
     const closeModalBtn = document.getElementById('close-modal-btn');
-    
-    let currentSelection = null; 
+    let currentSelection = null;
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         selectable: true,
-        headerToolbar: {
-            left: 'prev',
-            center: 'title',
-            right: 'next'
-        },
-        events: '/api/user/calendar', // Checks your server for saved dates
-
-        // 1. User drags to select dates
+        headerToolbar: { left: 'prev', center: 'title', right: 'next' },
+        events: '/api/user/calendar',
         select: function(info) {
             currentSelection = info;
-            // Format date for display (FullCalendar end date is exclusive, so we subtract 1 day for visual)
             let endDate = new Date(info.endStr);
             endDate.setDate(endDate.getDate() - 1);
-            
             modalRange.innerText = `${info.startStr} to ${endDate.toISOString().split('T')[0]}`;
             modal.classList.remove('hidden');
         },
-
-        // 2. User clicks an event to delete
         eventClick: async function(info) {
             if (info.event.extendedProps.type === 'user_avail') {
-                if (confirm(`Remove availability for "${info.event.title}"?`)) {
+                if (confirm('Delete this availability?')) {
                     await fetch(`/api/user/availability/${info.event.id}`, { method: 'DELETE' });
                     info.event.remove();
                 }
             }
         }
     });
-
     calendar.render();
 
-    // Close Modal
-    if(closeModalBtn) {
-        closeModalBtn.addEventListener('click', () => {
-            modal.classList.add('hidden');
-            calendar.unselect();
-        });
-    }
+    if(closeModalBtn) closeModalBtn.addEventListener('click', () => { modal.classList.add('hidden'); calendar.unselect(); });
 
-    // SAVE Button Logic
     if(saveAvailBtn) {
         saveAvailBtn.addEventListener('click', async () => {
-            if (!currentSelection) return;
-
+            if(!currentSelection) return;
             const payload = {
                 start_date: currentSelection.startStr,
                 end_date: currentSelection.endStr,
                 note: noteInput.value
             };
-
-            // Visual Feedback
-            saveAvailBtn.innerText = "Saving...";
-            
             try {
                 const res = await fetch('/api/user/availability', {
                     method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                if(res.ok) { calendar.refetchEvents(); modal.classList.add('hidden'); noteInput.value=''; }
+                else alert('Failed to save availability');
+            } catch(e) { console.error(e); }
+        });
+    }
+
+    // --- 5. SAVE PROFILE (Fixed Separate Fields) ---
+    const profileForm = document.getElementById('profile-form');
+    if(profileForm) {
+        profileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = profileForm.querySelector('button[type="submit"]');
+            btn.innerText = "Saving...";
+            
+            // Get values from hidden inputs
+            const payload = {
+                name: document.getElementById('display-name').value,
+                university_id: document.getElementById('university-id').value,
+                preferred_types: document.getElementById('types-input').value,       // New Field
+                preferred_activities: document.getElementById('activities-input').value // New Field
+            };
+
+            try {
+                // Using POST or PUT depending on your backend routes. Usually PUT for update.
+                const res = await fetch('/api/user/profile', {
+                    method: 'POST', 
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
-                if (res.ok) {
-                    calendar.refetchEvents(); // Reload calendar events
-                    modal.classList.add('hidden');
-                    noteInput.value = '';
+                if(res.ok) {
+                    alert('Profile updated!');
+                    const navName = document.getElementById('navUserName');
+                    if(navName) navName.textContent = payload.name;
                 } else {
-                    alert("Failed to save. Please try again.");
+                    alert('Error saving profile. Check console.');
                 }
-            } catch (err) {
-                console.error(err);
-                alert("Server error.");
-            } finally {
-                saveAvailBtn.innerText = "Confirm";
-            }
+            } catch(err) { console.error(err); alert('Server error'); }
+            finally { btn.innerText = "Save Profile"; }
         });
     }
 
-    // ==========================================
-    // 5. SAVE PROFILE FORM
-    // ==========================================
-    const profileForm = document.getElementById('profile-form');
-
-    if(profileForm) {
-        profileForm.addEventListener('submit', async (e) => {
+    // --- 6. CHANGE PASSWORD ---
+    const passForm = document.getElementById('password-form');
+    if(passForm) {
+        passForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            const btn = profileForm.querySelector('button[type="submit"]');
-            btn.innerText = "Saving...";
-            btn.disabled = true;
+            const newPass = document.getElementById('new-password').value;
+            const confirmPass = document.getElementById('confirm-password').value;
 
-            const formData = {
-                name: document.getElementById('display-name').value,
-                university_id: document.getElementById('university-id').value,
-                activities: document.getElementById('activities-input').value
-            };
+            if(newPass.length < 6) return alert("Password must be at least 6 characters");
+            if(newPass !== confirmPass) return alert("Passwords do not match");
 
             try {
-                const res = await fetch('/api/user/profile', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
+                const res = await fetch('/api/user/password', {
+                    method: 'POST', // or PUT
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ password: newPass })
                 });
-
-                if (res.ok) {
-                    alert('Profile updated successfully!');
-                    if(navUserName) navUserName.textContent = formData.name;
-                } else {
-                    alert('Error saving profile.');
-                }
-            } catch (err) {
-                console.error(err);
-                alert('Connection error.');
-            } finally {
-                btn.innerText = "Save Profile";
-                btn.disabled = false;
-            }
+                if(res.ok) { alert("Password changed successfully!"); passForm.reset(); }
+                else alert("Failed to change password.");
+            } catch(e) { console.error(e); }
         });
     }
 
-    // ==========================================
-    // 6. IMAGE PREVIEW
-    // ==========================================
-    const fileInput = document.getElementById('profile-upload');
-    const previewImg = document.getElementById('profile-pic-preview');
-
-    if(fileInput) {
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => previewImg.src = e.target.result;
-                reader.readAsDataURL(file);
-            }
-        });
-    }
-
-    // ==========================================
-    // 7. LOAD INITIAL DATA
-    // ==========================================
+    // --- 7. LOAD DATA (Populate Separate Tags) ---
     async function loadData() {
         try {
             const res = await fetch('/api/user/me');
             if(res.ok) {
                 const data = await res.json();
                 
-                // Navbar & Fields
+                // Name & Pic
                 if(data.name) {
                     document.getElementById('display-name').value = data.name;
-                    if(navUserName) navUserName.textContent = data.name;
+                    document.getElementById('navUserName').textContent = data.name;
                 }
                 if(data.picture) {
-                    if(navUserImg) navUserImg.src = data.picture;
-                    if(previewImg) previewImg.src = data.picture;
-                }
-                
-                // Set University
-                if(data.university_id) {
-                    const uni = universities.find(u => u.id == data.university_id);
-                    if(uni) selectUniversity(uni.id, uni.name);
+                    document.getElementById('navUserImg').src = data.picture;
+                    document.getElementById('profile-pic-preview').src = data.picture;
                 }
 
-                // Set Tags
-                if(data.activities) {
-                    const savedTags = data.activities.split(',');
-                    tagBtns.forEach(btn => {
-                        if(savedTags.includes(btn.dataset.val)) {
-                            btn.classList.add('selected');
-                        }
+                // University
+                if(data.university_id) {
+                    const uni = universities.find(u => u.id == data.university_id);
+                    if(uni) {
+                        uniHiddenInput.value = uni.id;
+                        uniDisplayText.textContent = uni.name;
+                    }
+                }
+
+                // REPOPULATE TYPES
+                if(data.preferred_types) {
+                    const types = data.preferred_types.split(','); // Assumes comma-separated string in DB
+                    document.querySelectorAll('.type-btn').forEach(btn => {
+                        if(types.includes(btn.dataset.val)) btn.classList.add('selected');
                     });
-                    updateActivitiesInput();
+                    document.getElementById('types-input').value = data.preferred_types;
+                }
+
+                // REPOPULATE ACTIVITIES
+                if(data.preferred_activities) {
+                    const acts = data.preferred_activities.split(','); 
+                    document.querySelectorAll('.act-btn').forEach(btn => {
+                        if(acts.includes(btn.dataset.val)) btn.classList.add('selected');
+                    });
+                    document.getElementById('activities-input').value = data.preferred_activities;
                 }
             }
-        } catch(e) {
-            console.log("Error loading profile");
-        }
+        } catch(e) { console.log("Error loading user data", e); }
     }
 
     loadData();

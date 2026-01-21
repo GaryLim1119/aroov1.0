@@ -1,222 +1,64 @@
-/* =========================================
-   1. NAVIGATION BAR STYLES (Copied logic)
-   ========================================= */
-:root {
-    --primary-color: #ff5a5f;
-    --text-color: #333;
-    --bg-color: #fff;
-}
-
+/* NAVBAR (Same as Index) */
+:root { --primary: #ff5a5f; --text: #333; }
 .navbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 70px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 2rem;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    z-index: 1000;
+    position: fixed; top: 0; left: 0; width: 100%; height: 70px;
+    background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); z-index: 1000;
 }
+.logo { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+.nav-links { display: flex; gap: 2rem; align-items: center; }
+.nav-links a { text-decoration: none; color: #555; font-weight: 500; transition: color 0.3s; }
+.nav-links a:hover, .nav-links a.active { color: var(--primary); }
+.btn-logout { color: #ef4444 !important; }
 
-.logo {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--primary-color);
-    letter-spacing: -0.5px;
-}
-
-.nav-links {
-    display: flex;
-    gap: 2rem;
-    align-items: center;
-}
-
-.nav-links a {
-    text-decoration: none;
-    color: #555;
-    font-weight: 500;
-    font-size: 0.95rem;
-    transition: color 0.3s;
-}
-
-.nav-links a:hover, .nav-links a.active {
-    color: var(--primary-color);
-}
-
-.btn-logout {
-    color: #ef4444 !important;
-}
-
-/* Profile Chip in Navbar */
+/* Profile Chip */
 .profile-chip {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 6px 15px;
-    background: #f3f4f6;
-    border-radius: 50px;
-    transition: all 0.3s ease;
+    display: flex; align-items: center; gap: 10px; padding: 6px 15px;
+    background: #f3f4f6; border-radius: 50px; transition: all 0.3s;
 }
+.profile-chip img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.profile-chip:hover, .profile-chip.active { background: #ffecec; color: var(--primary); }
 
-.profile-chip img {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-}
+/* Mobile Menu */
+.menu-toggle { display: none; cursor: pointer; flex-direction: column; gap: 5px; }
+.bar { width: 25px; height: 3px; background: #333; border-radius: 3px; transition: 0.3s; }
 
-.profile-chip:hover, .profile-chip.active {
-    background: #ffecec;
-    color: var(--primary-color);
-}
-
-/* Hamburger Menu (Mobile) */
-.menu-toggle {
-    display: none;
-    cursor: pointer;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.bar {
-    width: 25px;
-    height: 3px;
-    background-color: #333;
-    border-radius: 3px;
-    transition: 0.3s;
-}
-
-/* Mobile Responsive */
 @media (max-width: 768px) {
-    .menu-toggle {
-        display: flex;
-    }
-
+    .menu-toggle { display: flex; }
     .nav-links {
-        position: absolute;
-        top: 70px;
-        left: 0;
-        width: 100%;
-        background: white;
-        flex-direction: column;
-        padding: 2rem;
-        gap: 1.5rem;
-        border-top: 1px solid #eee;
-        transform: translateY(-150%); /* Hidden by default */
-        transition: transform 0.3s ease-in-out;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        position: absolute; top: 70px; left: 0; width: 100%; background: white;
+        flex-direction: column; padding: 2rem; gap: 1.5rem;
+        transform: translateY(-150%); transition: transform 0.3s ease-in-out;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 1px solid #eee;
     }
-
-    .nav-links.active {
-        transform: translateY(0); /* Slide down */
-    }
-
-    /* Animate Hamburger to X */
-    .menu-toggle.is-active .bar:nth-child(1) {
-        transform: translateY(8px) rotate(45deg);
-    }
-    .menu-toggle.is-active .bar:nth-child(2) {
-        opacity: 0;
-    }
-    .menu-toggle.is-active .bar:nth-child(3) {
-        transform: translateY(-8px) rotate(-45deg);
-    }
+    .nav-links.active { transform: translateY(0); }
+    .menu-toggle.is-active .bar:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+    .menu-toggle.is-active .bar:nth-child(2) { opacity: 0; }
+    .menu-toggle.is-active .bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
 }
 
-/* =========================================
-   2. PROFILE PAGE SPECIFIC STYLES
-   ========================================= */
+/* PROFILE SPECIFIC */
+/* University Dropdown */
+#uni-dropdown-list::-webkit-scrollbar { width: 6px; }
+#uni-dropdown-list::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+.uni-option { padding: 12px 16px; font-size: 0.9rem; color: #4b5563; cursor: pointer; border-bottom: 1px solid #f3f4f6; }
+.uni-option:hover { background-color: #fff1f2; color: var(--primary); }
 
-/* University Dropdown Custom Scrollbar */
-#uni-dropdown-list::-webkit-scrollbar {
-    width: 6px;
+/* Tags (Shared Style for Types and Activities) */
+.type-btn, .act-btn {
+    padding: 6px 14px; border-radius: 50px; border: 1px solid #e5e7eb;
+    background-color: #fff; color: #6b7280; font-size: 0.8rem; font-weight: 500;
+    transition: all 0.2s; cursor: pointer;
 }
-#uni-dropdown-list::-webkit-scrollbar-thumb {
-    background-color: #e2e8f0;
-    border-radius: 4px;
-}
+.type-btn:hover, .act-btn:hover { border-color: var(--primary); color: var(--primary); }
 
-/* University Options */
-.uni-option {
-    padding: 12px 16px;
-    font-size: 0.9rem;
-    color: #4b5563;
-    cursor: pointer;
-    border-bottom: 1px solid #f3f4f6;
-    transition: background 0.15s;
-}
-
-.uni-option:last-child {
-    border-bottom: none;
-}
-
-.uni-option:hover {
-    background-color: #fff1f2;
-    color: var(--primary-color);
-    font-weight: 500;
-}
-
-/* Activity Tags */
-.tag-btn {
-    padding: 8px 16px;
-    border-radius: 50px;
-    border: 1px solid #e5e7eb;
-    background-color: #fff;
-    color: #6b7280;
-    font-size: 0.85rem;
-    font-weight: 500;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer;
-}
-
-.tag-btn:hover {
-    border-color: var(--primary-color);
-    color: var(--primary-color);
-}
-
-/* Selected Tag State */
-.tag-btn.selected {
-    background-color: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
+/* Selected State */
+.type-btn.selected, .act-btn.selected {
+    background-color: var(--primary); color: white; border-color: var(--primary);
     box-shadow: 0 4px 12px rgba(255, 90, 95, 0.2);
 }
 
-/* FullCalendar Customizations */
-.fc-toolbar-title {
-    font-size: 1.25rem !important;
-    font-weight: 700 !important;
-    color: #1f2937;
-}
-
-.fc-button-primary {
-    background-color: var(--primary-color) !important;
-    border-color: var(--primary-color) !important;
-    font-weight: 500 !important;
-    transition: background 0.2s !important;
-}
-
-.fc-button-primary:hover {
-    background-color: #e0484d !important;
-    border-color: #e0484d !important;
-}
-
-.fc-day-today {
-    background-color: #fff1f2 !important;
-}
-
-/* Mobile Calendar Tweak */
-@media (max-width: 640px) {
-    .fc-header-toolbar {
-        flex-direction: column;
-        gap: 12px;
-    }
-    .fc-toolbar-title {
-        font-size: 1.1rem !important;
-    }
-}
+/* Calendar Tweaks */
+.fc-button-primary { background-color: var(--primary) !important; border-color: var(--primary) !important; }
+.fc-day-today { background-color: #fff1f2 !important; }
