@@ -9,18 +9,23 @@
 </head>
 <body>
 
-    <nav class="navbar">
-        <div class="logo">Aroov.</div>
-        <div class="nav-links">
-            <a href="index.html">Explore</a>
-            <a href="#" class="active">My Favourites</a>
-            <a href="groups.html">My Groups</a>
+<nav class="navbar">
+    <div class="logo">Aroov.</div>
+    <div class="nav-links">
+        <a href="/user">Explore</a> 
+        <a href="#" class="active">My Favourites</a>
+        <a href="groups.html">My Groups</a>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:15px;">
+        <div class="profile-chip">
+            <img src="https://via.placeholder.com/40" id="navUserImg" alt="Profile">
+            <span id="navUserName">Traveler</span>
         </div>
-        <div style="display:flex; align-items:center; gap:15px;">
-            <span style="font-size:13px; color:#666;">Welcome, User</span>
-            <a href="/logout" class="btn-logout">Logout</a>
-        </div>
-    </nav>
+        
+        <a href="/logout" class="btn-logout">Logout</a>
+    </div>
+</nav>
 
     <div class="container">
         

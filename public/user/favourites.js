@@ -1,15 +1,38 @@
-// 1. LOAD FAVOURITES ON STARTUP
+// 1. LOAD DATA ON STARTUP
 document.addEventListener('DOMContentLoaded', () => {
+    fetchUserProfile(); // <--- ADDED THIS
     loadFavourites();
 });
+
+// --- NEW FUNCTION: GET USER NAME & IMAGE ---
+async function fetchUserProfile() {
+    try {
+        const res = await fetch('/api/user/me'); 
+        if (res.ok) {
+            const user = await res.json();
+            
+            // Update Name
+            const nameEl = document.getElementById('navUserName');
+            if (nameEl) nameEl.textContent = user.name || "Traveler"; 
+
+            // Update Image
+            const imgEl = document.getElementById('navUserImg');
+            if (imgEl && user.picture) {
+                imgEl.src = user.picture;
+            }
+        }
+    } catch (err) {
+        console.error("Profile load failed:", err);
+    }
+}
+
+// --- EXISTING FAVOURITES LOGIC ---
 
 async function loadFavourites() {
     const grid = document.getElementById('favGrid');
     
     try {
-        // Fetch from your actual API
         const res = await fetch('/api/user/favourites');
-        
         if (!res.ok) throw new Error('Failed to fetch favourites');
 
         const data = await res.json();
@@ -23,7 +46,6 @@ async function loadFavourites() {
     }
 }
 
-// 2. RENDER THE GRID
 function renderGrid(data) {
     const grid = document.getElementById('favGrid');
 
@@ -32,16 +54,13 @@ function renderGrid(data) {
             <div style="grid-column: 1/-1; text-align:center; padding:50px;">
                 <h2 style="color:#ccc; margin-bottom:10px;">💔</h2>
                 <h3 style="color:#555;">No favourites yet</h3>
-                <p>Go back to <a href="/user" style="color:var(--primary); font-weight:600;">Explore</a> to save some trips!</p>
+                <p>Go back to <a href="/user" style="color:#ff5a5f; font-weight:600;">Explore</a> to save some trips!</p>
             </div>`;
         return;
     }
 
     grid.innerHTML = data.map(item => {
         const imgUrl = item.images || 'https://via.placeholder.com/400x300?text=Aroov+Trip';
-        
-        // DESTINATION ID: ensure we use the correct ID field from your DB (usually dest_id or id)
-        // I will use item.dest_id based on previous context, but fallback to item.id
         const destId = item.dest_id || item.id;
 
         return `
@@ -70,34 +89,29 @@ function renderGrid(data) {
                 </div>
             </div>
 
-            <button class="btn-details" onclick='openModal(${JSON.stringify(item).replace(/'/g, "&apos;")})'>
+            <button class="btn-details" onclick='openModal(${JSON.stringify(item).replace(/'/g, "&#39;")})'>
                 View Details
             </button>
         </div>
     `}).join('');
 }
 
-// 3. REMOVE FUNCTION (Handles Deletion)
 async function removeFavourite(btn, itemId) {
-    // 1. Confirmation
     if(!confirm("Remove this trip from your favourites?")) return;
 
     try {
-        // 2. Call API
         const res = await fetch(`/api/user/favourites/${itemId}`, { method: 'DELETE' });
         
         if (res.ok) {
-            // 3. Visual Removal (Fade out effect)
             const card = document.getElementById(`card-${itemId}`);
             if(card) {
                 card.style.opacity = '0';
                 card.style.transform = 'scale(0.9)';
                 setTimeout(() => {
                     card.remove();
-                    // Check if grid is empty now
                     const grid = document.getElementById('favGrid');
                     if(grid.querySelectorAll('.card').length === 0) {
-                         loadFavourites(); // Reloads to show "No favourites yet" message
+                         loadFavourites(); 
                     }
                 }, 300);
             }
@@ -106,19 +120,16 @@ async function removeFavourite(btn, itemId) {
         }
     } catch (err) {
         console.error("Remove error:", err);
-        alert("Server error. Check console.");
     }
 }
 
-// 4. MODAL LOGIC (Rich Version - Matches Index Page)
+// --- MODAL LOGIC ---
 const modal = document.getElementById('detailModal');
 const modalContent = document.getElementById('modalContentInject');
 
 function openModal(item) {
     const imgUrl = item.images || 'https://via.placeholder.com/800x450';
     const destId = item.dest_id || item.id;
-    
-    // Create Google Maps Link
     const mapQuery = encodeURIComponent(`${item.name} ${item.state} Malaysia`);
     const mapUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
 
@@ -137,7 +148,7 @@ function openModal(item) {
                     </div>
                     
                     <span class="modal-label">About</span>
-                    <p class="modal-desc">${item.description || "No description available for this destination."}</p>
+                    <p class="modal-desc">${item.description || "No description available."}</p>
                     
                     <span class="modal-label">Activities</span>
                     <p style="color:#555; line-height: 1.6;">
@@ -155,16 +166,11 @@ function openModal(item) {
                         </button>
                     </a>
 
-                    <button class="btn-modal-add" style="background:#555; margin-top:10px;" onclick="shareItem('${item.name}')">
-                        🔗 Share Link
-                    </button>
-
                     <button class="btn-modal-add heart-btn liked" 
                             style="margin-top:10px; background: white; color: red; border: 2px solid #eee;"
                             onclick="removeFavourite(this, '${destId}'); closeModal();">
                         💔 Remove Favourite
                     </button>
-
                 </div>
             </div>
         </div>
