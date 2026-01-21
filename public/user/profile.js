@@ -125,111 +125,74 @@ document.addEventListener('DOMContentLoaded', function() {
     setupTagGroup('.act-btn', 'activities-input');
 
     // ==========================================
-    // 5. CALENDAR LOGIC (ROBUST VERSION)
+    // 5. CALENDAR LOGIC (UPDATED: DRAG = FREE, CLICK = BUSY)
     // ==========================================
     const calendarEl = document.getElementById('calendar');
     
     if (calendarEl) {
-        const modal = document.getElementById('event-modal');
-        const modalRange = document.getElementById('modal-date-range');
-        const noteInput = document.getElementById('event-note');
-        const saveAvailBtn = document.getElementById('save-avail-btn');
-        const closeModalBtn = document.getElementById('close-modal-btn');
-        
-        // This stores the info from FullCalendar when you select dates
-        let currentSelectionInfo = null; 
-
         const calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
-            selectable: true,
+            selectable: true,      // Allows dragging
+            editable: false,       // Disable moving events manually
             headerToolbar: { left: 'prev', center: 'title', right: 'next' },
-            events: '/api/user/calendar',
+            events: '/api/user/calendar', // Load events from server
             
-            // 1. User selects dates
-            select: function(info) {
-                currentSelectionInfo = info; // Store info globally
+            // 1. DRAG TO SET AVAILABLE (No Modal)
+            select: async function(info) {
+                // Immediately save as "Available"
+                const start_date = info.startStr;
+                const end_date = info.endStr;
                 
-                // Format date for display
-                let endDate = new Date(info.endStr);
-                endDate.setDate(endDate.getDate() - 1);
-                modalRange.innerText = `${info.startStr} to ${endDate.toISOString().split('T')[0]}`;
-                
-                // Show Modal
-                modal.classList.remove('hidden');
-            },
-
-            // 2. Click to Delete
-            eventClick: async function(info) {
-                if (info.event.extendedProps.type === 'user_busy') { 
-                    if (confirm('Delete this busy slot?')) {
-                        try {
-                            const res = await fetch(`/api/user/availability/${info.event.id}`, { method: 'DELETE' });
-                            if(res.ok) info.event.remove();
-                            else alert("Could not delete.");
-                        } catch(e) { console.error(e); }
-                    }
-                }
-            }
-        });
-        calendar.render();
-
-        // Close Modal Logic
-        if(closeModalBtn) {
-            closeModalBtn.addEventListener('click', () => { 
-                modal.classList.add('hidden'); 
-                calendar.unselect(); 
-                currentSelectionInfo = null;
-            });
-        }
-
-        // Save Availability Logic
-        if(saveAvailBtn) {
-            saveAvailBtn.addEventListener('click', async (e) => {
-                // Prevent default behavior (stops form submission if accidental)
-                e.preventDefault(); 
-                
-                console.log("Confirm button clicked"); // Check your Console F12 if this appears
-
-                if (!currentSelectionInfo) {
-                    alert("No dates selected! Please drag on the calendar first.");
-                    modal.classList.add('hidden');
-                    return;
-                }
-
-                saveAvailBtn.innerText = "Saving...";
-                
-                const payload = {
-                    start_date: currentSelectionInfo.startStr,
-                    end_date: currentSelectionInfo.endStr,
-                    note: noteInput.value
-                };
-
                 try {
                     const res = await fetch('/api/user/availability', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify({ 
+                            start_date: start_date, 
+                            end_date: end_date, 
+                            note: "Available" // Default note
+                        })
                     });
 
-                    if(res.ok) {
-                        calendar.refetchEvents(); // Refresh calendar
-                        modal.classList.add('hidden'); 
-                        noteInput.value = '';
-                        currentSelectionInfo = null;
-                        console.log("Availability saved successfully");
+                    if (res.ok) {
+                        calendar.refetchEvents(); // Refresh to show green block
                     } else {
                         const txt = await res.text();
-                        console.error("Server Error:", txt);
                         alert("Error saving: " + txt);
                     }
-                } catch(err) {
-                    console.error("Network Error:", err);
-                    alert("Network error. Please check your connection.");
-                } finally {
-                    saveAvailBtn.innerText = "Confirm";
+                } catch (err) {
+                    console.error(err);
+                    alert("Network error.");
                 }
-            });
-        }
+                
+                calendar.unselect();
+            },
+
+            // 2. CLICK TO DELETE (SET BACK TO BUSY)
+            eventClick: async function(info) {
+                // Check if it is a Personal Event (user_busy)
+                if (info.event.extendedProps.type === 'user_busy') { 
+                    // Optional: Ask for confirmation
+                    if (confirm('Set this day back to Busy?')) {
+                        try {
+                            const res = await fetch(`/api/user/availability/${info.event.id}`, { method: 'DELETE' });
+                            
+                            if(res.ok) {
+                                info.event.remove(); // Remove immediately from view
+                            } else {
+                                alert("Could not delete.");
+                            }
+                        } catch(e) { 
+                            console.error(e); 
+                        }
+                    }
+                } else {
+                    // It is a University Event
+                    alert("This is a fixed university schedule.");
+                }
+            }
+        });
+        calendar.render();
     }
 
     // ==========================================

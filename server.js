@@ -413,28 +413,26 @@ app.post('/api/user/calendar/toggle', checkAuthenticated, async (req, res) => {
 });
 
 // 6. [NEW] Save Availability Range (Drag & Drop)
-// 6. [NEW] Save Availability Range (Drag & Drop)
+// 6. [NEW] Save Availability Range
 app.post('/api/user/availability', checkAuthenticated, async (req, res) => {
     let { start_date, end_date, note } = req.body;
     const userId = req.user.id || req.user.user_id;
 
     if (!start_date || !end_date) return res.status(400).json({ error: "Dates required" });
 
-    // FIX: FullCalendar sends '2023-11-01T00:00:00Z'. MySQL DATE needs '2023-11-01'.
-    // We split by 'T' to get just the date part.
     const formattedStart = start_date.split('T')[0];
     const formattedEnd = end_date.split('T')[0];
 
     try {
         await db.query(
             "INSERT INTO user_availability (user_id, start_date, end_date, note) VALUES (?, ?, ?, ?)",
-            [userId, formattedStart, formattedEnd, note || "Busy"]
+            // CHANGE "Busy" TO "Available" HERE:
+            [userId, formattedStart, formattedEnd, note || "Available"] 
         );
         res.json({ success: true });
     } catch (err) {
-        console.error("Database Error:", err.message); // Look at your terminal for this!
-        // Send the actual error message to the frontend for easier debugging
-        res.status(500).json({ error: err.message }); 
+        console.error("Database Error:", err.message);
+        res.status(500).json({ error: err.message });
     }
 });
 
