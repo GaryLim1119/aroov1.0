@@ -642,12 +642,29 @@ app.post('/api/groups/vote', async (req, res) => {
 });
 
 app.get('/api/user/me', (req, res) => {
-    if (!req.user) return res.status(401).json({ error: "Not logged in" });
+    // 1. Check if user is logged in
+    if (!req.session || !req.session.user) {
+        return res.status(401).json({ error: "Not logged in" });
+    }
+
+    // 2. Use 'user_id' instead of 'id'
+    const userId = req.session.user.user_id; 
+
+    // 3. Select 'name' and 'picture' matching your DB columns
+    const sql = "SELECT name, picture FROM users WHERE user_id = ?";
     
-    // Return the data needed for the chip
-    res.json({
-        username: req.user.username,
-        profile_picture: req.user.profile_picture // URL to image
+    db.query(sql, [userId], (err, results) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: "Database error" });
+        }
+        
+        if (results.length > 0) {
+            // Send the exact data from the database
+            res.json(results[0]); 
+        } else {
+            res.status(404).json({ error: "User not found" });
+        }
     });
 });
 

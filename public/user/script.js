@@ -283,20 +283,28 @@ window.onclick = function(e) {
 // Fetch User Data for Navbar
 async function fetchUserProfile() {
     try {
-        // Assuming you have an endpoint like /api/user/me that returns { username, profile_picture }
         const res = await fetch('/api/user/me'); 
         
         if (res.ok) {
             const user = await res.json();
             
-            // Update Name
-            const nameEl = document.getElementById('navUserName');
-            if (nameEl) nameEl.textContent = user.username || "Traveler";
+            // Debug: Check console to ensure data is arriving
+            console.log("User fetched:", user);
 
-            // Update Image (Use default if null)
+            // 1. Update Name (using 'name' column)
+            const nameEl = document.getElementById('navUserName');
+            if (nameEl) {
+                // Use user.name from your DB, fallback to "Traveler"
+                nameEl.textContent = user.name || "Traveler"; 
+            }
+
+            // 2. Update Image (using 'picture' column)
             const imgEl = document.getElementById('navUserImg');
-            if (imgEl && user.profile_picture) {
-                imgEl.src = user.profile_picture;
+            if (imgEl) {
+                // Use user.picture from your DB
+                if (user.picture && user.picture.trim() !== "") {
+                    imgEl.src = user.picture;
+                }
             }
         }
     } catch (err) {
