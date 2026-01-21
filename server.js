@@ -419,22 +419,33 @@ app.post('/api/user/calendar/toggle', checkAuthenticated, async (req, res) => {
 });
 
 // 6. [NEW] Save Availability Range (Drag & Drop)
-// 6. [NEW] Save Availability Range
+// 6. [UPDATED] Save Availability (Delete Overlaps First)
 app.post('/api/user/availability', checkAuthenticated, async (req, res) => {
     let { start_date, end_date, note } = req.body;
     const userId = req.user.id || req.user.user_id;
 
     if (!start_date || !end_date) return res.status(400).json({ error: "Dates required" });
 
-    const formattedStart = start_date.split('T')[0];
-    const formattedEnd = end_date.split('T')[0];
+    // Format dates to YYYY-MM-DD
+    const s = start_date.split('T')[0];
+    const e = end_date.split('T')[0];
 
     try {
+        // STEP 1: Delete any existing rows that overlap with this new range
+        // Logic: Overlap exists if (ExistingStart <= NewEnd) AND (ExistingEnd >= NewStart)
+        await db.query(`
+            DELETE FROM user_availability 
+            WHERE user_id = ? 
+            AND start_date <= ? 
+            AND end_date >= ?
+        `, [userId, e, s]);
+
+        // STEP 2: Insert the new status
         await db.query(
             "INSERT INTO user_availability (user_id, start_date, end_date, note) VALUES (?, ?, ?, ?)",
-            // CHANGE "Busy" TO "Available" HERE:
-            [userId, formattedStart, formattedEnd, note || "Available"] 
+            [userId, s, e, note] 
         );
+
         res.json({ success: true });
     } catch (err) {
         console.error("Database Error:", err.message);
