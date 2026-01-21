@@ -338,15 +338,21 @@ app.get('/api/user/calendar', checkAuthenticated, async (req, res) => {
         personalRows.forEach(row => {
             const s = safeDate(row.start_date);
             const e = safeDate(row.end_date);
+            
             if(s && e) {
+                // CHECK NOTE FOR COLOR
+                const isBusy = (row.note === 'Busy'); 
+                
                 events.push({
                     id: row.avail_id,
-                    title: row.note || 'Available',
+                    title: row.note || 'Available', // Shows text "Busy" or "Available"
                     start: s,
                     end: e,
                     display: 'background',
-                    backgroundColor: '#22c55e', // Green
-                    allDay: true
+                    // RED if Busy, GREEN if Available
+                    backgroundColor: isBusy ? '#ef4444' : '#22c55e', 
+                    allDay: true,
+                    extendedProps: { type: 'user_busy' }
                 });
             }
         });

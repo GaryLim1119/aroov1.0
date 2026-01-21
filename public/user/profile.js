@@ -31,7 +31,6 @@ document.addEventListener('DOMContentLoaded', function() {
             uniSection.classList.remove('hidden', 'opacity-50', 'pointer-events-none');
         } else {
             uniSection.classList.add('hidden', 'opacity-50', 'pointer-events-none');
-            // Optional: clear the selection if they switch to General
             document.getElementById('university-id').value = '';
             document.getElementById('uni-selected-text').textContent = 'Select University...';
         }
@@ -125,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupTagGroup('.act-btn', 'activities-input');
 
     // ==========================================
-    // 5. CALENDAR LOGIC (SMART TOGGLE VERSION)
+    // 5. CALENDAR LOGIC (3-OPTION VERSION)
     // ==========================================
     const calendarEl = document.getElementById('calendar');
     
@@ -133,12 +132,63 @@ document.addEventListener('DOMContentLoaded', function() {
         const modal = document.getElementById('event-modal');
         const modalRange = document.getElementById('modal-date-range');
         const noteInput = document.getElementById('event-note');
-        const saveAvailBtn = document.getElementById('save-avail-btn');
-        const closeModalBtn = document.getElementById('close-modal-btn');
+        const oldSaveBtn = document.getElementById('save-avail-btn'); // We will hide this
+        const closeBtn = document.getElementById('close-modal-btn');
         
-        // Store selection info globally
+        // Setup Custom Buttons Container (Injects if missing)
+        let customBtnContainer = document.getElementById('custom-modal-actions');
+        if (!customBtnContainer && modal) {
+            // Find where to insert buttons (after the note input)
+            const parent = noteInput.parentNode;
+            customBtnContainer = document.createElement('div');
+            customBtnContainer.id = 'custom-modal-actions';
+            customBtnContainer.className = 'flex flex-col gap-2 mt-4';
+            parent.insertBefore(customBtnContainer, oldSaveBtn.parentNode); // Insert before the old footer
+        }
+
+        // Store current selection
         let currentSelectionInfo = null; 
 
+        // Helper to Create the 3-Button Menu
+        function showActionButtons() {
+            // Hide default input and save button
+            if(noteInput) noteInput.style.display = 'none';
+            if(oldSaveBtn) oldSaveBtn.parentElement.style.display = 'none'; // Hide the footer row
+            
+            // Clear old buttons
+            customBtnContainer.innerHTML = '';
+
+            // 1. AVAILABLE BUTTON (Green)
+            const btnAvail = document.createElement('button');
+            btnAvail.className = 'w-full py-2 bg-green-500 text-white rounded hover:bg-green-600 font-medium';
+            btnAvail.innerText = "Mark as Available (Green)";
+            btnAvail.onclick = () => saveStatus('Available');
+
+            // 2. BUSY BUTTON (Red)
+            const btnBusy = document.createElement('button');
+            btnBusy.className = 'w-full py-2 bg-red-500 text-white rounded hover:bg-red-600 font-medium';
+            btnBusy.innerText = "Mark as Busy (Red)";
+            btnBusy.onclick = () => saveStatus('Busy');
+
+            // 3. CLEAR BUTTON (Gray)
+            const btnClear = document.createElement('button');
+            btnClear.className = 'w-full py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-medium';
+            btnClear.innerText = "Clear / No Condition (Gray)";
+            btnClear.onclick = () => deleteStatus();
+
+            // 4. CANCEL (Small text)
+            const btnCancel = document.createElement('button');
+            btnCancel.className = 'w-full text-xs text-gray-400 mt-2 hover:text-gray-600';
+            btnCancel.innerText = "Cancel";
+            btnCancel.onclick = () => { modal.classList.add('hidden'); calendar.unselect(); };
+
+            customBtnContainer.appendChild(btnAvail);
+            customBtnContainer.appendChild(btnBusy);
+            customBtnContainer.appendChild(btnClear);
+            customBtnContainer.appendChild(btnCancel);
+        }
+
+        // --- CALENDAR SETUP ---
         const calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             selectable: true,
@@ -146,120 +196,111 @@ document.addEventListener('DOMContentLoaded', function() {
             headerToolbar: { left: 'prev', center: 'title', right: 'next' },
             events: '/api/user/calendar',
             
-            // --- SMART SELECT LOGIC ---
-            select: async function(info) {
-                const selStart = info.start;
-                const selEnd = info.end;
-
-                // 1. Check if we dragged over existing "Available" events
-                const allEvents = calendar.getEvents();
-                const overlappingEvents = allEvents.filter(event => {
-                    // Check if event is 'user_busy' (Your Availability)
-                    if (event.extendedProps.type !== 'user_busy') return false;
-
-                    // Check for Date Overlap
-                    // (Selection Start < Event End) AND (Selection End > Event Start)
-                    return (selStart < event.end && selEnd > event.start);
-                });
-
-                // --- CONDITION A: If we dragged over GREEN -> DELETE IT (Back to Grey) ---
-                if (overlappingEvents.length > 0) {
-                    const confirmDelete = confirm(`Remove availability for these ${overlappingEvents.length} dates?`);
-                    if (confirmDelete) {
-                        for (let event of overlappingEvents) {
-                            try {
-                                await fetch(`/api/user/availability/${event.id}`, { method: 'DELETE' });
-                                event.remove(); // Remove visually
-                            } catch (e) { console.error(e); }
-                        }
-                    }
-                    calendar.unselect();
-                    return; // Stop here, do not open modal
-                }
-
-                // --- CONDITION B: If we dragged over GREY -> ADD NEW (Modal) ---
+            // DRAG or CLICK triggers the menu
+            select: function(info) {
                 currentSelectionInfo = info;
                 
-                // Format date text for Modal
+                // Format Date
                 let endDate = new Date(info.endStr);
-                endDate.setDate(endDate.getDate() - 1); // Adjust visual end date
+                endDate.setDate(endDate.getDate() - 1);
                 modalRange.innerText = `${info.startStr} to ${endDate.toISOString().split('T')[0]}`;
                 
-                // Reset Note & Show Modal
-                noteInput.value = ''; 
+                // Show Menu
+                showActionButtons();
                 modal.classList.remove('hidden');
             },
 
-            // Click is essentially same as drag-delete now, but good to keep as backup
-            eventClick: async function(info) {
-                if (info.event.extendedProps.type === 'user_busy') { 
-                    if (confirm('Remove this availability slot?')) {
-                        try {
-                            const res = await fetch(`/api/user/availability/${info.event.id}`, { method: 'DELETE' });
-                            if(res.ok) info.event.remove();
-                        } catch(e) { console.error(e); }
-                    }
-                } else {
-                    alert("This is a university schedule.");
+            eventClick: function(info) {
+                // If clicking an existing event, treat it as a selection of that date
+                if (info.event.extendedProps.type === 'user_busy') {
+                    // Manually trigger selection logic for this single event
+                    currentSelectionInfo = {
+                        startStr: info.event.startStr,
+                        endStr: info.event.endStr || info.event.startStr // Handle single days
+                    };
+                    
+                    modalRange.innerText = `Edit: ${info.event.startStr}`;
+                    showActionButtons();
+                    modal.classList.remove('hidden');
                 }
             }
         });
         calendar.render();
 
-        // --- MODAL BUTTON LISTENERS ---
+        // --- ACTION HANDLERS ---
 
-        // 1. Close Modal (Cancel)
-        if(closeModalBtn) {
-            closeModalBtn.addEventListener('click', () => { 
-                modal.classList.add('hidden'); 
-                calendar.unselect(); 
-                currentSelectionInfo = null;
-            });
+        // SAVE (Available or Busy)
+        async function saveStatus(statusNote) {
+            if (!currentSelectionInfo) return;
+            
+            // 1. First, delete any existing overlap to avoid duplicates
+            // (We do this by just overwriting on the server usually, but let's be safe)
+            // Ideally, your INSERT logic handles overlaps, but simple INSERT is fine.
+            
+            const payload = {
+                start_date: currentSelectionInfo.startStr,
+                end_date: currentSelectionInfo.endStr,
+                note: statusNote
+            };
+
+            try {
+                // We use a helper endpoint or just the normal POST
+                // NOTE: Ideally, the server should delete overlaps before inserting.
+                // But since we are "overwriting", we can just Post.
+                const res = await fetch('/api/user/availability', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if(res.ok) {
+                    calendar.refetchEvents();
+                    modal.classList.add('hidden');
+                    calendar.unselect();
+                } else {
+                    alert("Error saving.");
+                }
+            } catch(e) { console.error(e); }
         }
 
-        // 2. Save Availability (Confirm)
-        if(saveAvailBtn) {
-            saveAvailBtn.addEventListener('click', async (e) => {
-                e.preventDefault(); 
-                
-                if (!currentSelectionInfo) return;
+        // DELETE (Clear / Gray)
+        async function deleteStatus() {
+            if (!currentSelectionInfo) return;
+            
+            // Since we selected a RANGE (potentially multiple events), 
+            // we really need a "Delete by Range" endpoint. 
+            // But to keep it simple, we will fetch events in this range and delete them 1 by 1.
+            
+            const allEvents = calendar.getEvents();
+            const selStart = new Date(currentSelectionInfo.startStr);
+            const selEnd = new Date(currentSelectionInfo.endStr);
 
-                saveAvailBtn.innerText = "Saving...";
-                
-                const payload = {
-                    start_date: currentSelectionInfo.startStr,
-                    end_date: currentSelectionInfo.endStr,
-                    note: noteInput.value || "Available"
-                };
-
-                try {
-                    const res = await fetch('/api/user/availability', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if(res.ok) {
-                        calendar.refetchEvents(); // Show the new Green block
-                        modal.classList.add('hidden'); 
-                        currentSelectionInfo = null;
-                    } else {
-                        alert("Error saving.");
-                    }
-                } catch(err) {
-                    console.error("Network Error:", err);
-                } finally {
-                    saveAvailBtn.innerText = "Confirm";
-                }
+            const eventsToDelete = allEvents.filter(e => {
+                 return (e.extendedProps.type === 'user_busy') && 
+                        (e.start < selEnd && (e.end || e.start) > selStart);
             });
+
+            if (eventsToDelete.length === 0) {
+                modal.classList.add('hidden');
+                calendar.unselect();
+                return;
+            }
+
+            // Loop delete
+            for (let ev of eventsToDelete) {
+                await fetch(`/api/user/availability/${ev.id}`, { method: 'DELETE' });
+            }
+            
+            calendar.refetchEvents();
+            modal.classList.add('hidden');
+            calendar.unselect();
         }
     }
 
     // ==========================================
-    // 6. SHARED SAVE FUNCTION
+    // 6. SHARED SAVE FUNCTION (Profile Data)
     // ==========================================
     async function saveProfileData(password = null) {
-        // Collect Tags
         let typesVal = document.getElementById('types-input').value;
         let actsVal = document.getElementById('activities-input').value;
 
@@ -268,7 +309,6 @@ document.addEventListener('DOMContentLoaded', function() {
         try { typesPayload = JSON.parse(typesVal || "[]"); } catch(e) { typesPayload = []; }
         try { actsPayload = JSON.parse(actsVal || "[]"); } catch(e) { actsPayload = []; }
 
-        // Get Role directly from Checked Radio
         const selectedRoleEl = document.querySelector('input[name="role"]:checked');
         const roleValue = selectedRoleEl ? selectedRoleEl.value : 'student';
 
@@ -352,14 +392,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentUserData.budget_min = data.budget_min || 0;
                 currentUserData.budget_max = data.budget_max || 1000;
 
-                // 1. Set Radio Button
                 const roleRadio = document.querySelector(`input[name="role"][value="${currentUserData.role}"]`);
                 if(roleRadio) {
                     roleRadio.checked = true;
                     toggleUniversityField(currentUserData.role);
                 }
 
-                // 2. Basic Info
                 document.getElementById('display-name').value = data.name;
                 document.getElementById('navUserName').textContent = data.name;
                 if(data.picture) {
@@ -367,13 +405,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('profile-pic-preview').src = data.picture;
                 }
 
-                // 3. University
                 if(data.university_id) {
                     const uni = allUniversities.find(u => u.university_id == data.university_id);
                     if(uni) selectUniversity(uni.university_id, uni.name);
                 }
 
-                // 4. Tags
                 let types = [];
                 let activities = [];
 
@@ -402,7 +438,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch(e) { console.log("Error loading user profile", e); }
     }
 
-    // Upload Preview
     const fileInput = document.getElementById('profile-upload');
     const previewImg = document.getElementById('profile-pic-preview');
     if(fileInput) {
