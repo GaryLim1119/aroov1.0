@@ -22,35 +22,26 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 1. SERVE STATIC FILES (Crucial for Vercel)
+// 1. SERVE STATIC FILES
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads'))); 
 
 // --- SESSION SETUP ---
-// --- SESSION SETUP (UPDATED FOR VERCEL) ---
-app.set('trust proxy', 1); // Trust Vercel's proxy (Required)
+app.set('trust proxy', 1); // Trust Vercel's proxy
 
 app.use(cookieSession({
     name: 'session',
-    keys: [process.env.SESSION_SECRET || 'secretkey'], // Encrypts the cookie
+    keys: [process.env.SESSION_SECRET || 'secretkey'],
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
 }));
 
 // --- FIX FOR PASSPORT + COOKIE-SESSION ---
 app.use((req, res, next) => {
     if (req.session && !req.session.regenerate) {
-        req.session.regenerate = (cb) => {
-            // "regenerate" simply clears the current session in this context
-            // cookie-session doesn't have a specific regenerate method, 
-            // but this keeps Passport happy.
-            cb();
-        };
+        req.session.regenerate = (cb) => { cb(); };
     }
     if (req.session && !req.session.save) {
-        req.session.save = (cb) => {
-            // cookie-session saves automatically, so we just invoke the callback
-            cb();
-        };
+        req.session.save = (cb) => { cb(); };
     }
     next();
 });
@@ -67,9 +58,7 @@ const db = mysql.createPool({
     password: process.env.DB_PASS,             
     database: process.env.DB_NAME,    
     port: process.env.DB_PORT || 4000, 
-    ssl: {
-        rejectUnauthorized: true 
-    },
+    ssl: { rejectUnauthorized: true },
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
@@ -106,7 +95,6 @@ const upload = multer({ storage: storage });
 // =========================================================
 // --- PASSPORT CONFIG ---
 // =========================================================
-// Only store the essentials in the cookie to save space and keep it secure
 passport.serializeUser((user, done) => {
     const sessionUser = {
         id: user.id || user.user_id,
@@ -119,18 +107,15 @@ passport.serializeUser((user, done) => {
 });
 
 passport.deserializeUser((user, done) => {
-    // In cookie-session, 'user' IS the data we saved above.
-    // We pass it straight through to req.user
     done(null, user);
 });
 
-// GOOGLE STRATEGY
 // GOOGLE STRATEGY
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: `${process.env.BASE_URL}/auth/google/callback`,
-    proxy: true // <--- ADD THIS LINE. Crucial for Vercel!
+    proxy: true 
   },
   async function(accessToken, refreshToken, profile, cb) {
       try {
@@ -143,7 +128,7 @@ passport.use(new GoogleStrategy({
               email: profile.emails[0].value,
               name: profile.displayName,
               picture: profile.photos[0].value,
-              role: 'student'
+              role: 'student' // Default role
           };
           const [result] = await db.query('INSERT INTO users (email, name, picture, role) VALUES (?, ?, ?, ?)', 
               [newUser.email, newUser.name, newUser.picture, newUser.role]);
@@ -168,19 +153,18 @@ passport.use(new LocalStrategy({ usernameField: 'email' }, async (email, passwor
 }));
 
 // =========================================================
-// --- PAGE ROUTES (UPDATED) ---
+// --- PAGE ROUTES ---
 // =========================================================
 
-// ✅ FIXED: Points directly to public/index.html
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public','official', 'official.html'));
 });
 
-// NOTE: Ensure 'auth' folder is still inside 'public' for this to work
 app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'auth', 'login.html'));
 });
 
+// Middleware to protect routes
 function checkAuthenticated(req, res, next) {
     if (req.isAuthenticated()) return next();
     res.redirect('/login');
@@ -224,13 +208,151 @@ app.get('/logout', (req, res, next) => {
 });
 
 // =========================================================
+// --- 🆕 PROFILE, UNIVERSITIES & CALENDAR APIs ---
+// =========================================================
+
+// 1. Get All Universities (For Dropdown)
+app.get('/api/universities', async (req, res) => {
+    try {
+        const [rows] = await db.query("SELECT university_id, name FROM universities ORDER BY name ASC");
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. Get Full User Profile
+app.get('/api/user/profile', checkAuthenticated, async (req, res) => {
+    try {
+        const userId = req.user.id || req.user.user_id;
+        const [rows] = await db.query(`
+            SELECT user_id, email, name, picture, role, university_id, 
+                   budget_min, budget_max, preferred_types, preferred_activities 
+            FROM users WHERE user_id = ?`, [userId]);
+            
+        if (rows.length === 0) return res.status(404).json({ error: "User not found" });
+        res.json(rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 3. Update User Profile
+app.put('/api/user/profile', checkAuthenticated, async (req, res) => {
+    const { name, role, university_id, budget_min, budget_max, preferred_types, preferred_activities, password } = req.body;
+    const userId = req.user.id || req.user.user_id;
+
+    let passwordSql = "";
+    // JSON.stringify helps store array data in MySQL JSON columns
+    let params = [
+        name, 
+        role, 
+        (role === 'student' ? university_id : null), // Only save Uni ID if student
+        budget_min, 
+        budget_max, 
+        JSON.stringify(preferred_types),     
+        JSON.stringify(preferred_activities) 
+    ];
+
+    try {
+        if (password) {
+            // Basic Password Validation (Optional but recommended)
+            if (password.length < 6) return res.status(400).json({ error: "Password must be 6+ chars" });
+            
+            const hashedPassword = await bcrypt.hash(password, 10);
+            passwordSql = ", password = ?";
+            params.push(hashedPassword);
+        }
+
+        params.push(userId); // Add ID for WHERE clause
+
+        const sql = `UPDATE users SET name=?, role=?, university_id=?, budget_min=?, budget_max=?, preferred_types=?, preferred_activities=? ${passwordSql} WHERE user_id=?`;
+        
+        await db.query(sql, params);
+        
+        // Update Session to reflect new name/role immediately
+        if (req.session && req.session.passport && req.session.passport.user) {
+             req.session.passport.user.name = name;
+             req.session.passport.user.role = role;
+        }
+
+        res.json({ message: "Profile updated successfully" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Update failed" });
+    }
+});
+
+// 4. Get Calendar Data (University + Personal)
+app.get('/api/user/calendar', checkAuthenticated, async (req, res) => {
+    const userId = req.user.id || req.user.user_id;
+    let events = [];
+
+    try {
+        // A. Fetch Personal Busy Dates
+        const [personalRows] = await db.query("SELECT start_date, end_date, note FROM user_availability WHERE user_id = ?", [userId]);
+        
+        events = events.concat(personalRows.map(r => ({
+            title: r.note || "Busy",
+            start: r.start_date,
+            end: r.end_date, 
+            color: "#7f8c8d", // Grey
+            display: 'background'
+        })));
+
+        // B. Fetch University Events (If user is a student)
+        const [userRows] = await db.query("SELECT university_id FROM users WHERE user_id = ?", [userId]);
+        const uniId = userRows[0]?.university_id;
+
+        if (uniId) {
+            const [uniRows] = await db.query("SELECT event_name, start_date, end_date, type FROM university_schedules WHERE university_id = ?", [uniId]);
+            
+            events = events.concat(uniRows.map(r => ({
+                title: r.event_name,
+                start: r.start_date,
+                end: r.end_date,
+                color: r.type === 'semester_break' ? "#2ecc71" : "#e74c3c" // Green vs Red
+            })));
+        }
+
+        res.json(events);
+    } catch (err) {
+        res.status(500).json({ error: "Calendar Error" });
+    }
+});
+
+// 5. Toggle Personal Availability (Busy/Free)
+app.post('/api/user/calendar/toggle', checkAuthenticated, async (req, res) => {
+    const { date } = req.body; 
+    const userId = req.user.id || req.user.user_id;
+
+    try {
+        // Check if date is already blocked
+        const [existing] = await db.query("SELECT avail_id FROM user_availability WHERE user_id=? AND start_date=?", [userId, date]);
+
+        if (existing.length > 0) {
+            // Unblock: Delete row
+            await db.query("DELETE FROM user_availability WHERE avail_id=?", [existing[0].avail_id]);
+            res.json({ status: "free" });
+        } else {
+            // Block: Insert row
+            await db.query("INSERT INTO user_availability (user_id, start_date, end_date, note) VALUES (?, ?, ?, ?)", 
+                [userId, date, date, 'Personal Busy']);
+            res.json({ status: "busy" });
+        }
+    } catch (err) {
+        res.status(500).json({ error: "Toggle Error" });
+    }
+});
+
+// =========================================================
 // --- FAVOURITES APIs ---
 // =========================================================
 
 app.post('/api/user/favourites', checkAuthenticated, async (req, res) => {
     try {
         const userId = req.user.id || req.user.user_id; 
-        const destId = req.body.destinationId || req.body.dest_id || req.body.destination_id;
+        const destId = req.body.destinationId || req.body.dest_id;
 
         if (!destId) return res.status(400).json({ error: "Missing destination ID" });
 
@@ -241,7 +363,6 @@ app.post('/api/user/favourites', checkAuthenticated, async (req, res) => {
         res.json({ message: "Added to favourites", id: result.insertId });
     } catch (err) {
         if (err.code === 'ER_DUP_ENTRY') return res.json({ message: "Already added" });
-        console.error("Fav Error:", err);
         res.status(500).json({ error: "Database error" });
     }
 });
@@ -257,7 +378,6 @@ app.delete('/api/user/favourites/:id', checkAuthenticated, async (req, res) => {
         );
         res.json({ message: "Removed from favourites" });
     } catch (err) {
-        console.error("Fav Delete Error:", err);
         res.status(500).json({ error: "Database error" });
     }
 });
@@ -343,7 +463,6 @@ app.get('/api/destinations', async (req, res) => {
         res.json({ data: data, totalPages: totalPages });
 
     } catch (err) {
-        console.error("Database Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -514,7 +633,7 @@ app.post('/api/groups/:id/invite', async (req, res) => {
         await db.query('INSERT INTO group_invites (group_id, email, token) VALUES (?, ?, ?)', [groupId, email, token]);
 
         // DYNAMIC INVITE LINK
-        const baseUrl = process.env.BASE_URL; // REQUIRED in Env Var
+        const baseUrl = process.env.BASE_URL; 
         const inviteLink = `${baseUrl}/api/join?token=${token}`;
         
         const mailOptions = {
@@ -641,24 +760,18 @@ app.post('/api/groups/vote', async (req, res) => {
     }
 });
 
-app.get('/api/user/me', async (req, res) => { // <--- Added 'async'
-    // 1. Check if user is logged in
-    // Note: Passport uses req.user, cookie-session manual usage uses req.session.user
-    // This handles both cases:
+// Basic User Info (For Navbar)
+app.get('/api/user/me', async (req, res) => {
     const user = req.user || (req.session && req.session.user);
 
     if (!user) {
         return res.status(401).json({ error: "Not logged in" });
     }
 
-    // 2. Use 'user_id' (or 'id' depending on how it was saved in session)
     const userId = user.id || user.user_id; 
-
-    // 3. Select 'name' and 'picture' matching your DB columns
     const sql = "SELECT name, picture FROM users WHERE user_id = ?";
     
     try {
-        // --- FIX: Use 'await' instead of a callback function ---
         const [results] = await db.query(sql, [userId]);
         
         if (results.length > 0) {
@@ -669,144 +782,6 @@ app.get('/api/user/me', async (req, res) => { // <--- Added 'async'
     } catch (err) {
         console.error("Profile Fetch Error:", err);
         res.status(500).json({ error: "Database error" });
-    }
-});
-
-// --- 1. GET ALL UNIVERSITIES (For Dropdown) ---
-app.get('/api/universities', async (req, res) => {
-    try {
-        const [rows] = await pool.query("SELECT university_id, name FROM universities ORDER BY name ASC");
-        res.json(rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "DB Error" });
-    }
-});
-
-// --- 2. GET USER PROFILE ---
-app.get('/api/user/profile', isAuthenticated, async (req, res) => {
-    try {
-        const [rows] = await pool.query(`
-            SELECT user_id, email, name, picture, role, university_id, 
-                   budget_min, budget_max, preferred_types, preferred_activities 
-            FROM users WHERE user_id = ?`, [req.session.user.id]);
-            
-        if (rows.length === 0) return res.status(404).json({ error: "User not found" });
-        res.json(rows[0]);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Server Error" });
-    }
-});
-
-// --- 3. UPDATE PROFILE ---
-app.put('/api/user/profile', isAuthenticated, async (req, res) => {
-    const { name, role, university_id, budget_min, budget_max, preferred_types, preferred_activities, password } = req.body;
-    const userId = req.session.user.id;
-
-    let passwordSql = "";
-    // Prepare preferences as JSON strings
-    let params = [
-        name, 
-        role, 
-        (role === 'student' ? university_id : null), // Only save Uni ID if role is student
-        budget_min, 
-        budget_max, 
-        JSON.stringify(preferred_types),     
-        JSON.stringify(preferred_activities) 
-    ];
-
-    if (password) {
-        // Password Rule: 8+ chars, 1 number, 1 special char
-        const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{8,}$/;
-        if (!passwordRegex.test(password)) {
-            return res.status(400).json({ error: "Password must be 8+ chars, with a number & symbol." });
-        }
-        const hashedPassword = await bcrypt.hash(password, 10);
-        passwordSql = ", password = ?";
-        params.push(hashedPassword);
-    }
-
-    params.push(userId); // For WHERE clause
-
-    try {
-        const sql = `UPDATE users SET name=?, role=?, university_id=?, budget_min=?, budget_max=?, preferred_types=?, preferred_activities=? ${passwordSql} WHERE user_id=?`;
-        await pool.query(sql, params);
-        
-        // Update Session to reflect new name/role immediately
-        req.session.user.name = name;
-        if(role) req.session.user.role = role;
-
-        res.json({ message: "Profile updated successfully" });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Update failed" });
-    }
-});
-
-// --- 4. CALENDAR DATA (The Smart Logic) ---
-app.get('/api/user/calendar', isAuthenticated, async (req, res) => {
-    const userId = req.session.user.id;
-    let events = [];
-
-    try {
-        // A. Fetch Personal Busy Dates (From user_availability)
-        const [personalRows] = await pool.query("SELECT start_date, end_date, note FROM user_availability WHERE user_id = ?", [userId]);
-        
-        events = events.concat(personalRows.map(r => ({
-            title: r.note || "Busy",
-            start: r.start_date,
-            end: r.end_date, 
-            color: "#7f8c8d", // Grey for personal
-            display: 'background'
-        })));
-
-        // B. Fetch University Events (If user is a student)
-        const [userRows] = await pool.query("SELECT university_id FROM users WHERE user_id = ?", [userId]);
-        const uniId = userRows[0]?.university_id;
-
-        if (uniId) {
-            // Join with university_schedules to get semester dates
-            const [uniRows] = await pool.query("SELECT event_name, start_date, end_date, type FROM university_schedules WHERE university_id = ?", [uniId]);
-            
-            events = events.concat(uniRows.map(r => ({
-                title: r.event_name,
-                start: r.start_date,
-                end: r.end_date,
-                // Green for breaks, Red for exams
-                color: r.type === 'semester_break' ? "#2ecc71" : "#e74c3c" 
-            })));
-        }
-
-        res.json(events);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Calendar Error" });
-    }
-});
-
-// --- 5. TOGGLE PERSONAL AVAILABILITY ---
-app.post('/api/user/calendar/toggle', isAuthenticated, async (req, res) => {
-    const { date } = req.body; 
-    const userId = req.session.user.id;
-
-    try {
-        // Check if date is already blocked
-        const [existing] = await pool.query("SELECT avail_id FROM user_availability WHERE user_id=? AND start_date=?", [userId, date]);
-
-        if (existing.length > 0) {
-            // Unblock: Delete row
-            await pool.query("DELETE FROM user_availability WHERE avail_id=?", [existing[0].avail_id]);
-            res.json({ status: "free" });
-        } else {
-            // Block: Insert row
-            await pool.query("INSERT INTO user_availability (user_id, start_date, end_date, note) VALUES (?, ?, ?, ?)", 
-                [userId, date, date, 'Personal Busy']);
-            res.json({ status: "busy" });
-        }
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Toggle Error" });
     }
 });
 
