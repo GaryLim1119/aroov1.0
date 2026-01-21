@@ -5,10 +5,11 @@
     --bg: #f7f7f9;
     --text: #222;
     --card-radius: 24px;
+    --shadow-soft: 0 10px 40px rgba(0,0,0,0.08);
 }
 
 * { box-sizing: border-box; font-family: 'Poppins', sans-serif; margin: 0; padding: 0; }
-body { background-color: var(--bg); color: var(--text); }
+body { background-color: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
 a { text-decoration: none; }
 
 /* --- NAVBAR --- */
@@ -175,6 +176,7 @@ a { text-decoration: none; }
     align-items: center; 
     justify-content: center;
     box-shadow: 0 4px 10px rgba(255, 90, 95, 0.2);
+    color: white;
 }
 .search-btn:hover { transform: scale(1.05); }
 
@@ -215,7 +217,7 @@ a { text-decoration: none; }
 .icon-btn {
     width: 40px; height: 40px; border-radius: 50%; background: #f7f7f9;
     border: none; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: 0.2s; color: #555;
+    cursor: pointer; transition: 0.2s; color: #555; font-size: 18px;
 }
 .icon-btn:hover { background: #eee; color: var(--primary); }
 
