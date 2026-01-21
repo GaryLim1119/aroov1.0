@@ -923,7 +923,60 @@ app.get('/api/universities', async (req, res) => {
     }
 });
 
+// [GET] Fetch Combined Availability for a Group
+app.get('/api/groups/:groupId/calendar', checkAuthenticated, async (req, res) => {
+    const { groupId } = req.params;
 
+    try {
+        // 1. Verify user is in the group (Security)
+        const [membership] = await db.query(
+            "SELECT * FROM group_members WHERE group_id = ? AND user_id = ?",
+            [groupId, req.user.id || req.user.user_id]
+        );
+        if (membership.length === 0) return res.status(403).json({ error: "Not a member" });
+
+        // 2. Fetch availability for ALL members of this group
+        // We join 3 tables: group_members -> users -> user_availability
+        const query = `
+            SELECT 
+                ua.avail_id, 
+                ua.start_date, 
+                ua.end_date, 
+                ua.note,
+                u.name as user_name,
+                u.user_id
+            FROM group_members gm
+            JOIN users u ON gm.user_id = u.user_id
+            JOIN user_availability ua ON u.user_id = ua.user_id
+            WHERE gm.group_id = ?
+        `;
+
+        const [rows] = await db.query(query, [groupId]);
+
+        // 3. Transform for Frontend
+        // We return events labeled with the user's name
+        const events = rows.map(row => ({
+            id: row.avail_id,
+            title: row.user_name, // Event Title is the Person's Name
+            start: row.start_date,
+            end: row.end_date,
+            allDay: true,
+            // Visuals: Different color for "Busy" vs "Available"
+            backgroundColor: (row.note === 'Busy') ? '#ef4444' : '#22c55e', 
+            extendedProps: {
+                type: 'member_availability',
+                note: row.note,
+                userId: row.user_id
+            }
+        }));
+
+        res.json(events);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Server error fetching group calendar" });
+    }
+});
 
 
 

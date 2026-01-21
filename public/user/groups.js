@@ -1,9 +1,30 @@
 let currentGroupId = null;
-let currentUserRole = 'member'; 
+let currentUserRole = 'member';
+let groupCalendar = null; // NEW: Store calendar instance
 
-window.onload = function() {
-    loadGroups();
-};
+// ==========================================
+// 0. INITIALIZATION
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    fetchUserProfile(); 
+    loadGroups();       
+    highlightCurrentTab(); 
+
+    // Mobile Menu Logic
+    const menuToggle = document.querySelector('.menu-toggle');
+    const navLinks = document.querySelector('.nav-links');
+    if (menuToggle && navLinks) {
+        menuToggle.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+        });
+    }
+
+    // Initialize Calendar container if valid (rare case on load)
+    const calendarEl = document.getElementById('full-calendar-container');
+    if (calendarEl && !groupCalendar) {
+        // defined later
+    }
+});
 
 // --- API HELPER ---
 async function fetchAPI(url, options = {}) {
@@ -15,54 +36,23 @@ async function fetchAPI(url, options = {}) {
     return data;
 }
 
-// --- RUN THIS ON LOAD ---
-// --- RUN THIS ON LOAD ---
-document.addEventListener('DOMContentLoaded', () => {
-    fetchUserProfile(); 
-    loadGroups();       
-    highlightCurrentTab(); 
-
-    // --- NEW: ADD THIS CODE TO MAKE MENU WORK ---
-    const menuToggle = document.querySelector('.menu-toggle');
-    const navLinks = document.querySelector('.nav-links');
-
-    if (menuToggle && navLinks) {
-        menuToggle.addEventListener('click', () => {
-            navLinks.classList.toggle('active');
-        });
-    }
-});
-
 // --- FUNCTION TO HIGHLIGHT ACTIVE TAB ---
 function highlightCurrentTab() {
     const currentPath = window.location.pathname;
     const navLinks = document.querySelectorAll('.nav-links a');
-
-    // 1. Remove 'active' class from ALL links first
     navLinks.forEach(link => link.classList.remove('active'));
 
-    // 2. Add 'active' class based on the URL
     if (currentPath.includes('favourites.html')) {
-        // Find the Favourites link
         const favLink = document.querySelector('a[href*="favourites"]');
         if (favLink) favLink.classList.add('active');
-
     } else if (currentPath.includes('groups.html')) {
-        // Find the Groups link
         const groupLink = document.querySelector('a[href*="groups"]');
         if (groupLink) groupLink.classList.add('active');
-
     } else {
-        // Default to "Explore" (for /user or /user/index.html)
         const exploreLink = document.querySelector('a[href="/user"]');
         if (exploreLink) exploreLink.classList.add('active');
     }
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    fetchUserProfile(); // Add this line
-    loadGroups();       // Your existing function
-});
 
 async function fetchUserProfile() {
     try {
@@ -120,7 +110,7 @@ async function selectGroup(id, element) {
 }
 
 // ==========================================
-// 3. TAB SWITCHING LOGIC
+// 3. TAB SWITCHING LOGIC (UPDATED)
 // ==========================================
 function switchTab(tabName, btnElement) {
     // Hide all tabs
@@ -136,21 +126,26 @@ function switchTab(tabName, btnElement) {
     if (tabName === 'destinations') loadTrips('destinationsList');
     if (tabName === 'vote') loadTrips('votingList'); 
     if (tabName === 'recommend') loadRecommendations();
+
+    // NEW: Calendar Load
+    if (tabName === 'calendar') {
+        // Slight delay to ensure div is visible before rendering calendar
+        setTimeout(() => {
+            loadGroupCalendar(currentGroupId);
+        }, 100);
+    }
 }
 
 // ==========================================
-// 4. LOAD MEMBERS (Matches fixed Backend)
+// 4. LOAD MEMBERS
 // ==========================================
 async function loadGroupMembers() {
     try {
-        // Fetch: returns { members: [], invites: [], currentUserRole: "" }
         const data = await fetchAPI(`/api/groups/${currentGroupId}`);
         currentUserRole = data.currentUserRole;
 
-        // Show/Hide Admin Buttons
         document.getElementById('groupActions').style.display = (currentUserRole === 'leader') ? 'flex' : 'none';
 
-        // Render Members
         const tbody = document.getElementById('memberListBody');
         if (!data.members || data.members.length === 0) {
             tbody.innerHTML = '<tr><td colspan="3">No members found</td></tr>';
@@ -169,7 +164,6 @@ async function loadGroupMembers() {
             `).join('');
         }
 
-        // Render Invites
         const pendingSection = document.getElementById('pendingSection');
         const pendingList = document.getElementById('pendingInvitesList');
         
@@ -235,7 +229,6 @@ async function vote(tripRefId) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tripRefId })
         });
-        // Refresh the current list to show new count
         const activeTab = document.querySelector('.tab-link.active').innerText;
         if(activeTab.includes('Voting')) loadTrips('votingList');
         else loadTrips('destinationsList');
@@ -245,14 +238,13 @@ async function vote(tripRefId) {
 }
 
 // ==========================================
-// 6. RECOMMENDATIONS (Add from Favourites)
+// 6. RECOMMENDATIONS
 // ==========================================
 async function loadRecommendations() {
     try {
         const favs = await fetchAPI('/api/user/favourites');
         const currentTrips = await fetchAPI(`/api/groups/${currentGroupId}/trips`);
         
-        // Create Set of IDs already in the group for fast lookup
         const existingIds = new Set(currentTrips.map(t => t.dest_id));
         const container = document.getElementById('recommendList');
 
@@ -286,9 +278,12 @@ async function loadRecommendations() {
     } catch (err) { console.error(err); }
 }
 
-async function addToGroup(groupId, destId) {
+// FIX: Updated to use global currentGroupId
+async function addToGroup(destId) {
+    if(!currentGroupId) return alert("No group selected");
+    
     try {
-        const response = await fetch(`/api/groups/${groupId}/recommend`, {
+        const response = await fetch(`/api/groups/${currentGroupId}/recommend`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ destination_id: destId })
@@ -298,9 +293,8 @@ async function addToGroup(groupId, destId) {
 
         if (response.ok) {
             alert("✅ " + (result.message || "Shared successfully!"));
-            closeModal(); // Close your popup if you have one
+            loadRecommendations(); // Refresh list to show "Added" button
         } else {
-            // --- THIS LINE MAKES THE MESSAGE APPEAR ---
             alert("⚠️ " + result.error); 
         }
 
@@ -311,7 +305,102 @@ async function addToGroup(groupId, destId) {
 }
 
 // ==========================================
-// 7. MODAL ACTIONS
+// 7. CALENDAR & BEST DATE LOGIC (NEW)
+// ==========================================
+
+async function loadGroupCalendar(groupId) {
+    const calendarEl = document.getElementById('tab-calendar');
+    
+    // Clear previous but keep structure
+    calendarEl.innerHTML = `
+        <div id="calendar-recommendation" class="p-4 mb-4 bg-blue-50 border border-blue-200 rounded-lg hidden" style="background:#eef6ff; border:1px solid #bddeff; padding:15px; border-radius:8px; margin-bottom:15px; display:none;">
+            <h4 style="margin:0; color:#1e40af;">💡 Best Time to Travel</h4>
+            <p id="recommendation-text" style="margin:5px 0 0 0; font-size:14px; color:#1e3a8a;">Analyzing...</p>
+        </div>
+        <div id="full-calendar-container" style="background:white; padding:15px; border-radius:10px;"></div>
+    `;
+
+    try {
+        const events = await fetchAPI(`/api/groups/${groupId}/calendar`);
+
+        // 1. Calculate Best Dates
+        calculateBestDates(events);
+
+        // 2. Render Calendar
+        const calContainer = document.getElementById('full-calendar-container');
+        
+        const calendar = new FullCalendar.Calendar(calContainer, {
+            initialView: 'dayGridMonth',
+            headerToolbar: { left: 'prev,next', center: 'title', right: 'today' },
+            events: events,
+            height: 500,
+            eventDidMount: function(info) {
+                // Tooltip
+                info.el.title = `${info.event.title}: ${info.event.extendedProps.note}`;
+            }
+        });
+        
+        calendar.render();
+
+    } catch (err) {
+        console.error("Calendar Error", err);
+        calendarEl.innerHTML = `<p style="color:red; text-align:center; padding:20px;">Error loading calendar data.</p>`;
+    }
+}
+
+function calculateBestDates(events) {
+    // Filter only "Available" events (Ignore Busy)
+    const availEvents = events.filter(e => e.extendedProps.note !== 'Busy');
+    
+    if(availEvents.length === 0) {
+        document.getElementById('calendar-recommendation').style.display = 'none';
+        return;
+    }
+
+    // Map: "YYYY-MM-DD" -> Count
+    const dateCounts = {};
+    
+    availEvents.forEach(ev => {
+        let current = new Date(ev.start);
+        const end = new Date(ev.end);
+        
+        while(current < end) {
+            const dateStr = current.toISOString().split('T')[0];
+            dateCounts[dateStr] = (dateCounts[dateStr] || 0) + 1;
+            current.setDate(current.getDate() + 1);
+        }
+    });
+
+    // Find Max Overlap
+    let maxCount = 0;
+    let bestDates = [];
+
+    Object.entries(dateCounts).forEach(([date, count]) => {
+        if (count > maxCount) {
+            maxCount = count;
+            bestDates = [date];
+        } else if (count === maxCount) {
+            bestDates.push(date);
+        }
+    });
+
+    // Display Result
+    const recBox = document.getElementById('calendar-recommendation');
+    const recText = document.getElementById('recommendation-text');
+    
+    if (maxCount > 1) {
+        bestDates.sort();
+        const displayDates = bestDates.slice(0, 3).join(', ') + (bestDates.length > 3 ? '...' : '');
+        
+        recBox.style.display = 'block';
+        recText.innerHTML = `We found a match! <strong>${maxCount} members</strong> are available on these dates: <br/> 📅 <strong>${displayDates}</strong>`;
+    } else {
+        recBox.style.display = 'none';
+    }
+}
+
+// ==========================================
+// 8. MODAL ACTIONS
 // ==========================================
 function openModal(id) { document.getElementById(id).style.display = 'flex'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
@@ -326,7 +415,7 @@ async function submitCreateGroup() {
             body:JSON.stringify({name})
         });
         closeModal('modalCreate');
-        document.getElementById('newGroupName').value = ''; // Reset input
+        document.getElementById('newGroupName').value = '';
         loadGroups();
     } catch(e) { alert(e.message); }
 }
@@ -342,7 +431,7 @@ async function submitInvite() {
         alert("Invite sent!");
         closeModal('modalInvite');
         document.getElementById('inviteEmail').value = '';
-        loadGroupMembers(); // Refresh pending list
+        loadGroupMembers(); 
     } catch(e) { alert(e.message); }
 }
 
@@ -356,8 +445,8 @@ async function submitEditGroup() {
             body: JSON.stringify({ name })
         });
         closeModal('modalEdit');
-        document.getElementById('groupHeaderTitle').innerText = name; // Update header immediately
-        loadGroups(); // Update sidebar
+        document.getElementById('groupHeaderTitle').innerText = name; 
+        loadGroups(); 
     } catch (e) { alert(e.message); }
 }
 
@@ -365,6 +454,6 @@ async function submitDeleteGroup() {
     try {
         await fetchAPI(`/api/groups/${currentGroupId}`, { method: 'DELETE' });
         closeModal('modalDelete');
-        window.location.reload(); // Reload page to clear selection
+        window.location.reload(); 
     } catch (e) { alert(e.message); }
 }
