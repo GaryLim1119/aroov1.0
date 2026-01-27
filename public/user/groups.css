@@ -186,6 +186,129 @@ a { text-decoration: none; }
 .btn-confirm-delete { background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
 
 /* =========================================
+   MODAL / POPUP STYLES
+   ========================================= */
+
+/* The Dark Background Overlay */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%;
+    background: rgba(0,0,0,0.6); /* Dark see-through background */
+    z-index: 200; 
+    backdrop-filter: blur(5px); /* Blur effect behind popup */
+    align-items: center; 
+    justify-content: center; 
+    padding: 20px;
+}
+
+/* The White Box Container */
+.modal-content {
+    background: white; 
+    border-radius: 30px; 
+    width: 100%; 
+    max-width: 900px; 
+    max-height: 90vh; /* Don't be taller than screen */
+    overflow-y: auto; /* Scroll if content is too long */
+    position: relative; 
+    box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+    animation: modalPopUp 0.3s ease-out;
+}
+
+@keyframes modalPopUp {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* Close Button (The X) */
+.close-btn {
+    position: absolute; 
+    top: 25px; 
+    right: 30px;
+    background: rgba(255,255,255,0.8); 
+    width: 40px; 
+    height: 40px;
+    border-radius: 50%; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    font-size: 24px; 
+    cursor: pointer; 
+    z-index: 10; 
+    transition: 0.2s;
+    color: #333;
+}
+.close-btn:hover { background: white; transform: rotate(90deg); }
+
+/* Hero Image at top of Modal */
+.modal-hero-img { 
+    width: 100%; 
+    height: 400px; 
+    object-fit: cover; 
+    border-radius: 30px 30px 0 0; 
+}
+
+/* Layout inside the Modal */
+.modal-body { padding: 40px; }
+.modal-flex { display: flex; gap: 40px; flex-wrap: wrap; }
+.modal-main { flex: 2; min-width: 300px; }
+.modal-sidebar { 
+    flex: 1; 
+    min-width: 250px; 
+    background: #f9f9f9; 
+    padding: 30px; 
+    border-radius: 20px; 
+    height: fit-content; 
+}
+
+/* Typography inside Modal */
+.modal-title { font-size: 32px; font-weight: 700; margin-bottom: 10px; line-height: 1.2; color: #222; }
+.modal-desc { font-size: 16px; line-height: 1.8; color: #444; margin-bottom: 30px; white-space: pre-line; }
+
+/* Buttons inside Modal */
+.btn-map {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 15px; background: #e3f2fd; color: #007aff;
+    border-radius: 15px; font-weight: 600; transition: 0.2s; border:none; cursor: pointer; margin-top: 20px;
+}
+.btn-map:hover { background: #bbdefb; }
+
+.btn-modal-add {
+    width: 100%; padding: 15px; background: #222; color: white;
+    border-radius: 15px; font-size: 16px; font-weight: 600; border: none; cursor: pointer; transition: 0.3s; margin-top: 15px;
+}
+.btn-modal-add:hover { background: #444; }
+
+/* =========================================
+   CARD BUTTON STYLES
+   ========================================= */
+
+/* The 'View Details' button on the card itself */
+.btn-details {
+    display: block;
+    width: calc(100% - 50px); /* Full width minus margins */
+    margin: 0 25px 25px 25px;
+    background: white; 
+    color: #222; 
+    border: 2px solid #eee;
+    padding: 12px; 
+    border-radius: 30px; 
+    font-size: 14px; 
+    font-weight: 600;
+    cursor: pointer; 
+    transition: 0.3s; 
+    text-align: center;
+}
+.btn-details:hover { 
+    background: #222; 
+    color: white; 
+    border-color: #222;
+}
+
+/* =========================================
    4. RESPONSIVE / MOBILE DESIGN
    ========================================= */
 @media (max-width: 768px) {
