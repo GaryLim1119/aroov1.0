@@ -530,3 +530,78 @@ function renderGridInContainer(data, containerId) {
         </div>
     `}).join('');
 }
+
+// --- 1. OPEN MODAL FUNCTION ---
+function openModal(item) {
+    const modal = document.getElementById('detailModal');
+    const content = document.getElementById('modalContentInject');
+
+    // Safety check: Does the modal exist in HTML?
+    if (!modal || !content) {
+        console.error("Error: Modal HTML element not found. Check Step 1.");
+        return;
+    }
+
+    // Handle data: if it's a string (from HTML), parse it. If object, use it.
+    const dest = (typeof item === 'string') ? JSON.parse(item) : item;
+    
+    // Fallback images/text
+    const imgUrl = dest.images || 'https://via.placeholder.com/800x450';
+    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dest.name + ' ' + dest.state)}`;
+
+    // Inject Content
+    content.innerHTML = `
+        <div class="close-btn" onclick="closeDetailModal()">×</div>
+        <img src="${imgUrl}" class="modal-hero-img">
+        
+        <div class="modal-body">
+            <div class="modal-flex">
+                <div class="modal-main">
+                    <span style="background:#eee; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold; color:#555;">${dest.type || 'Destination'}</span>
+                    <span style="margin-left:5px; color:#777; font-size:14px;">📍 ${dest.state}</span>
+                    
+                    <h1 class="modal-title" style="margin-top:10px;">${dest.name}</h1>
+                    
+                    <p class="modal-desc">
+                        ${dest.description || "No description available for this location."}
+                    </p>
+
+                    <div style="margin-top:20px; background:#f9f9f9; padding:15px; border-radius:8px;">
+                        <h4 style="margin:0 0 5px 0;">🏃🏻‍♂️ Activities</h4>
+                        <p style="margin:0; color:#555;">${dest.activities || "Sightseeing"}</p>
+                    </div>
+                </div>
+
+                <div class="modal-sidebar">
+                    <div style="border:1px solid #eee; padding:15px; border-radius:8px; text-align:center; background:white;">
+                        <div style="font-size:12px; color:#888;">Estimated Cost</div>
+                        <div style="font-weight:bold; font-size:22px; color:#2c3e50; margin:5px 0;">
+                            RM${dest.price_min} - ${dest.price_max}
+                        </div>
+                    </div>
+                    
+                    <a href="${mapUrl}" target="_blank" style="text-decoration:none;">
+                        <button class="btn-map">🗺️ View on Google Maps</button>
+                    </a>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Show the modal (CSS must be set to display:flex or block)
+    modal.style.display = 'flex';
+}
+
+// --- 2. CLOSE MODAL FUNCTION ---
+function closeDetailModal() {
+    const modal = document.getElementById('detailModal');
+    if (modal) modal.style.display = 'none';
+}
+
+// --- 3. CLOSE ON OUTSIDE CLICK ---
+window.onclick = function(event) {
+    const modal = document.getElementById('detailModal');
+    if (event.target === modal) {
+        closeDetailModal();
+    }
+}
