@@ -10,8 +10,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
-// Add this as the very first line of server.js
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+
 
 
 // --- CLOUDINARY IMPORTS ---
