@@ -279,9 +279,19 @@ async function loadRecommendations() {
 }
 
 // FIX: Updated to use global currentGroupId
-async function addToGroup(destId) {
+// ==========================================
+// UPDATED: Add To Group
+// ==========================================
+async function addToGroup(destId, btnElement) {
     if(!currentGroupId) return alert("No group selected");
     
+    // 1. Visually indicate loading
+    const originalText = btnElement ? btnElement.innerText : '';
+    if(btnElement) {
+        btnElement.innerText = "Adding...";
+        btnElement.disabled = true;
+    }
+
     try {
         const response = await fetch(`/api/groups/${currentGroupId}/recommend`, {
             method: 'POST',
@@ -292,15 +302,31 @@ async function addToGroup(destId) {
         const result = await response.json();
 
         if (response.ok) {
-            alert("✅ " + (result.message || "Shared successfully!"));
-            loadRecommendations(); // Refresh list to show "Added" button
+            // 2. Success: Change button permanently
+            if(btnElement) {
+                btnElement.innerHTML = "Added ✅";
+                btnElement.style.background = "#ddd";
+                btnElement.style.color = "#888";
+                btnElement.style.cursor = "not-allowed";
+            }
+            // Optionally reload recommendations to keep everything in sync
+            // loadRecommendations(); 
         } else {
-            alert("⚠️ " + result.error); 
+            alert("⚠️ " + result.error);
+            // Revert button if failed
+            if(btnElement) {
+                btnElement.innerText = originalText;
+                btnElement.disabled = false;
+            }
         }
 
     } catch (error) {
         console.error('Error:', error);
         alert("❌ An unexpected error occurred.");
+        if(btnElement) {
+            btnElement.innerText = originalText;
+            btnElement.disabled = false;
+        }
     }
 }
 
@@ -458,16 +484,25 @@ async function submitDeleteGroup() {
     } catch (e) { alert(e.message); }
 }
 
-// NEW FUNCTION: Load AI Recommendations
+// ==========================================
+// UPDATED: Load AI Recommendations
+// ==========================================
 async function loadAIRecommendations() {
     const container = document.getElementById('ai-recommend-container');
     container.innerHTML = '<p style="text-align:center; padding:20px;">🤖 AI is finding the best spots for your group...</p>';
 
     try {
-        const recommendations = await fetchAPI(`/api/groups/${currentGroupId}/ai-recommend`);
+        // 1. Fetch AI Recs AND Current Trips (to check what is added)
+        const [recommendations, currentTrips] = await Promise.all([
+            fetchAPI(`/api/groups/${currentGroupId}/ai-recommend`),
+            fetchAPI(`/api/groups/${currentGroupId}/trips`)
+        ]);
+
+        // 2. Create a Set of existing Destination IDs for fast lookup
+        const existingIds = new Set(currentTrips.map(t => t.dest_id));
         
-        // Use the Render Function you provided
-        renderGridInContainer(recommendations, 'ai-recommend-container');
+        // 3. Pass existingIds to the render function
+        renderGridInContainer(recommendations, 'ai-recommend-container', existingIds);
 
     } catch (err) {
         container.innerHTML = `<p style="text-align:center; color:red;">Could not load AI suggestions.</p>`;
@@ -476,7 +511,8 @@ async function loadAIRecommendations() {
 }
 
 // ADAPTED RENDER FUNCTION (To work inside specific containers)
-function renderGridInContainer(data, containerId) {
+// Added 3rd parameter: existingIds (defaults to empty if not provided)
+function renderGridInContainer(data, containerId, existingIds = new Set()) {
     const grid = document.getElementById(containerId);
     
     if (!data || data.length === 0) {
@@ -492,12 +528,23 @@ function renderGridInContainer(data, containerId) {
         const imgUrl = item.images || 'https://via.placeholder.com/400x300?text=Aroov+Trip';
         const priceDisplay = item.price_min > 0 ? `RM${item.price_min} - ${item.price_max}` : 'Free';
         
-        // --- KEY CHANGE 1: Prepare Full Object for the Modal ---
-        // We use &quot; to escape quotes so it works inside the HTML attribute
+        // Prepare Full Object for the Modal
         const safeFullItem = JSON.stringify(item).replace(/"/g, '&quot;');
 
-        // For the specific "Add" function, we might just need the ID
         const destId = item.dest_id;
+
+        // --- CHANGE START: Determine Button State ---
+        const isAdded = existingIds.has(destId);
+
+        let buttonHtml;
+        if (isAdded) {
+            // Disabled "Added" Button
+            buttonHtml = `<button disabled style="padding:8px 12px; font-size:12px; border:none; background:#ddd; color:#888; border-radius:20px; cursor:not-allowed;">Added ✅</button>`;
+        } else {
+            // Normal "Add" Button
+            buttonHtml = `<button class="btn-primary" style="padding:8px 12px; font-size:12px; border:none; background:#222; color:#fff; border-radius:20px; cursor:pointer;" onclick="addToGroup('${destId}', this)">Add ➕</button>`;
+        }
+        // --- CHANGE END ---
 
         return `
         <div class="card" style="border: 2px solid #e0f2fe;"> 
@@ -518,10 +565,7 @@ function renderGridInContainer(data, containerId) {
                     <span class="price-value">${priceDisplay}</span>
                 </div>
                 <div class="card-icons">
-                     <button class="btn-primary" style="padding:8px 12px; font-size:12px; border:none; background:#222; color:#fff; border-radius:20px; cursor:pointer;" onclick="addToGroup('${destId}', this)">
-                        Add ➕
-                    </button>
-                </div>
+                     ${buttonHtml}  </div>
             </div>
 
             <button class="btn-details" onclick="openModal(${safeFullItem})">
