@@ -1010,8 +1010,8 @@ app.get('/api/groups/:groupId/ai-recommend', checkAuthenticated, async (req, res
 
         // 2. Construct Python API URL
         // Force HTTPS on Vercel
-        const protocol = req.headers['x-forwarded-proto'] || req.protocol; 
-        const host = req.get('host');
+        const host = process.env.VERCEL_URL || req.get('host');
+        const protocol = 'https'; // Force HTTPS on Vercel
         const pythonApiUrl = `${protocol}://${host}/api/recommend`;
         
         console.log(`🔗 Calling Python at: ${pythonApiUrl}`);

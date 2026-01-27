@@ -6,8 +6,7 @@ from collections import Counter
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
-            # 1. Read Input Safely
-            # Use .get() to avoid crashing if header is missing
+            # 1. Safe Input Reading
             content_len = int(self.headers.get('Content-Length', 0))
             if content_len == 0:
                 self._send_json([])
@@ -19,85 +18,118 @@ class handler(BaseHTTPRequestHandler):
             users = input_data.get('users', [])
             destinations = input_data.get('destinations', [])
 
-            if not users or not destinations:
+            if not destinations:
                 self._send_json([])
                 return
 
             # ==========================================
-            # A. BUILD GROUP PROFILE
+            # A. ROBUST GROUP PROFILE BUILDER
             # ==========================================
-            # 1. Budget
-            valid_max = [float(u['budget_max']) for u in users if u.get('budget_max') is not None]
-            avg_max_budget = sum(valid_max) / len(valid_max) if valid_max else 5000
+            
+            # --- 1. BUDGET LOGIC ---
+            valid_budgets = []
+            for u in users:
+                try:
+                    val = u.get('budget_max')
+                    # Check if val is not None and not empty string
+                    if val is not None and str(val).strip() != "":
+                        valid_budgets.append(float(val))
+                except:
+                    continue # Skip this user's budget if corrupt
 
-            # 2. Tags
+            # RULE: If valid budgets exist, average them. If ALL are NULL, use default 5000.
+            if valid_budgets:
+                avg_max_budget = sum(valid_budgets) / len(valid_budgets)
+            else:
+                avg_max_budget = 5000.0 # Default fallback
+
+            # --- 2. TAGS LOGIC ---
             group_tags = []
             for u in users:
-                acts = self._clean_list(u.get('preferred_activities'))
-                types = self._clean_list(u.get('preferred_types'))
-                group_tags.extend(acts + types)
+                try:
+                    # Clean and merge both activity and type preferences
+                    acts = self._clean_list(u.get('preferred_activities'))
+                    types = self._clean_list(u.get('preferred_types'))
+                    group_tags.extend(acts + types)
+                except:
+                    continue 
 
+            # RULE: If no tags found (All NULL), use generic travel tags
             if not group_tags: 
-                group_tags = ["nature", "city", "relax"]
+                group_tags = ["nature", "city", "relax", "scenic", "food", "adventure"]
             
-            # Create Group Vector
+            # Create Vector and Magnitude
             group_vec = Counter(group_tags)
-            
-            # OPTIMIZATION: Calculate Group Magnitude ONCE here (instead of inside the loop)
             mag_group = math.sqrt(sum(val**2 for val in group_vec.values()))
+            
+            # Safety: If magnitude is 0 (shouldn't happen due to defaults), make it 1 to avoid crash
+            if mag_group == 0: mag_group = 1
 
             # ==========================================
-            # B. MATH ENGINE (Cosine Similarity)
+            # B. SCORING ENGINE
             # ==========================================
             scored_destinations = []
 
             for dest in destinations:
-                # 1. Build Destination Vector
-                d_text = f"{dest.get('type','')} {dest.get('state','')} {dest.get('name','')}".lower()
-                dest_vec = Counter(d_text.split())
-
-                # 2. Calculate Similarity
-                # Intersection of words (Dot Product)
-                common_words = set(group_vec.keys()) & set(dest_vec.keys())
-                dot_product = sum(group_vec[word] * dest_vec[word] for word in common_words)
-                
-                # Dest Magnitude
-                mag_dest = math.sqrt(sum(val**2 for val in dest_vec.values()))
-
-                if mag_group * mag_dest == 0:
-                    similarity = 0
-                else:
-                    similarity = dot_product / (mag_group * mag_dest)
-
-                # 3. Budget Bonus
                 try:
-                    price = float(dest.get('price_min') or 0)
-                    if price <= (avg_max_budget * 1.2):
-                        similarity += 0.1
-                except:
-                    pass # Ignore price errors
+                    # 1. Build Destination Vector (Handle missing fields safely)
+                    d_type = str(dest.get('type') or "")
+                    d_state = str(dest.get('state') or "")
+                    d_name = str(dest.get('name') or "")
+                    
+                    d_text = f"{d_type} {d_state} {d_name}".lower()
+                    dest_vec = Counter(d_text.split())
 
-                # Store Result
-                dest['similarity'] = similarity
-                scored_destinations.append(dest)
+                    # 2. Cosine Similarity
+                    common_words = set(group_vec.keys()) & set(dest_vec.keys())
+                    dot_product = sum(group_vec[word] * dest_vec[word] for word in common_words)
+                    
+                    mag_dest = math.sqrt(sum(val**2 for val in dest_vec.values()))
+
+                    similarity = 0
+                    if mag_dest > 0:
+                        similarity = dot_product / (mag_group * mag_dest)
+
+                    # 3. Budget Bonus
+                    try:
+                        price = float(dest.get('price_min') or 0)
+                        # If price is within 20% over budget, or budget is high default
+                        if price <= (avg_max_budget * 1.2):
+                            similarity += 0.1
+                    except:
+                        pass # Ignore price error, keep calculated similarity
+
+                    # Store Result
+                    dest['similarity'] = similarity
+                    scored_destinations.append(dest)
+                
+                except Exception:
+                    # If one destination fails, skip it. Don't crash the whole app.
+                    continue
 
             # ==========================================
             # C. SORT & RESPONSE
             # ==========================================
-            scored_destinations.sort(key=lambda x: x['similarity'], reverse=True)
+            # Sort by score descending
+            scored_destinations.sort(key=lambda x: x.get('similarity', 0), reverse=True)
+            
+            # Return Top 10
             self._send_json(scored_destinations[:10])
 
         except Exception as e:
+            # Catch global crashes
             self._send_error(str(e))
 
-    # --- HELPER FUNCTIONS ---
-    
+    # --- HELPERS ---
     def _clean_list(self, val):
         if not val: return []
-        if isinstance(val, str):
-            # Clean stringified lists like "['Nature', 'Beach']"
-            val = val.replace('[','').replace(']','').replace('"','').replace("'",'').split(',')
-        return [str(x).strip().lower() for x in val if x]
+        try:
+            if isinstance(val, str):
+                # Handle stringified arrays like "['Nature', 'Beach']"
+                val = val.replace('[','').replace(']','').replace('"','').replace("'",'').split(',')
+            return [str(x).strip().lower() for x in val if x.strip()]
+        except:
+            return []
 
     def _send_json(self, data):
         self.send_response(200)
