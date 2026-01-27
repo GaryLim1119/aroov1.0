@@ -518,7 +518,7 @@ function renderGridInContainer(data, containerId) {
                     <span class="price-value">${priceDisplay}</span>
                 </div>
                 <div class="card-icons">
-                     <button class="btn-primary" style="padding:5px 10px; font-size:12px;" onclick="addToGroup(${item.dest_id})">
+                     <button class="btn-primary" style="padding:5px 10px; font-size:12px;" onclick="addToGroup('${item.dest_id}')">
                         Add ➕
                     </button>
                 </div>
