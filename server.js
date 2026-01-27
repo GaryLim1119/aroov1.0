@@ -10,7 +10,17 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
-const { spawn } = require('child_process'); // Import this at the top (recommended_engine)
+const protocol = req.protocol;
+const host = req.get('host');
+// The URL must point to your new Python API
+const pythonApiUrl = `${protocol}://${host}/api/recommend`; 
+
+const response = await fetch(pythonApiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ users, destinations })
+});
+// ...
 
 // --- CLOUDINARY IMPORTS ---
 const cloudinary = require('cloudinary').v2;
@@ -979,12 +989,14 @@ app.get('/api/groups/:groupId/calendar', checkAuthenticated, async (req, res) =>
     }
 });
 
-// [GET] AI Recommendations for a Group
+// Add 'node-fetch' if you are on older Node.js, otherwise built-in 'fetch' works
+// If needed: const fetch = require('node-fetch'); 
+
 app.get('/api/groups/:groupId/ai-recommend', checkAuthenticated, async (req, res) => {
     const { groupId } = req.params;
 
     try {
-        // 1. Fetch Group Members
+        // 1. Fetch Data from MySQL
         const [users] = await db.query(`
             SELECT u.budget_min, u.budget_max, u.preferred_activities, u.preferred_types 
             FROM group_members gm
@@ -992,54 +1004,38 @@ app.get('/api/groups/:groupId/ai-recommend', checkAuthenticated, async (req, res
             WHERE gm.group_id = ?
         `, [groupId]);
 
-        // 2. Fetch All Destinations (CORRECTED TABLE NAME)
-        // CHANGED 'destinations' -> 'destination'
-        const [destinations] = await db.query("SELECT * FROM destination"); 
+        const [destinations] = await db.query("SELECT * FROM destination");
 
-        if (users.length === 0 || destinations.length === 0) {
-            console.log("No users or destinations found.");
-            return res.json([]);
+        if (users.length === 0 || destinations.length === 0) return res.json([]);
+
+        // 2. Determine the URL for the Python API
+        // On Vercel, it lives at /api/recommend
+        // On Localhost, we need the full URL
+        const protocol = req.protocol;
+        const host = req.get('host');
+        const pythonApiUrl = `${protocol}://${host}/api/recommend`;
+
+        console.log("Sending data to Python AI at:", pythonApiUrl);
+
+        // 3. Send Data to Python Function
+        const response = await fetch(pythonApiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ users, destinations })
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Python API Failed: ${errText}`);
         }
 
-        // 3. Prepare Data for Python
-        const inputData = JSON.stringify({ users, destinations });
-
-        // 4. Spawn Python Process
-        const pythonProcess = spawn('python', ['./recommend_engine.py']); // Use 'python3' on Mac/Linux if needed
-
-        let result = '';
-        let errorData = '';
-
-        // Send data to Python via stdin
-        pythonProcess.stdin.write(inputData);
-        pythonProcess.stdin.end();
-
-        // Listen for data back
-        pythonProcess.stdout.on('data', (data) => {
-            result += data.toString();
-        });
-
-        pythonProcess.stderr.on('data', (data) => {
-            errorData += data.toString();
-        });
-
-        pythonProcess.on('close', (code) => {
-            if (code !== 0) {
-                console.error("Python Error:", errorData);
-                return res.status(500).json({ error: "Recommendation Engine Failed" });
-            }
-            try {
-                const recommendations = JSON.parse(result);
-                res.json(recommendations);
-            } catch (e) {
-                console.error("JSON Parse Error:", e);
-                res.status(500).json({ error: "Failed to parse recommendations" });
-            }
-        });
+        const recommendations = await response.json();
+        res.json(recommendations);
 
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Server Error" });
+        console.error("AI Recommendation Error:", err.message);
+        // Fallback: If Python fails, return empty list so app doesn't crash
+        res.json([]); 
     }
 });
 
