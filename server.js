@@ -10,6 +10,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
+const { spawn } = require('child_process'); // Import this at the top (recommended_engine)
 
 // --- CLOUDINARY IMPORTS ---
 const cloudinary = require('cloudinary').v2;
@@ -975,6 +976,69 @@ app.get('/api/groups/:groupId/calendar', checkAuthenticated, async (req, res) =>
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Server error fetching group calendar" });
+    }
+});
+
+// [GET] AI Recommendations for a Group
+app.get('/api/groups/:groupId/ai-recommend', checkAuthenticated, async (req, res) => {
+    const { groupId } = req.params;
+
+    try {
+        // 1. Fetch Group Members & Their Preferences
+        const [users] = await db.query(`
+            SELECT u.budget_min, u.budget_max, u.preferred_activities, u.preferred_types 
+            FROM group_members gm
+            JOIN users u ON gm.user_id = u.user_id
+            WHERE gm.group_id = ?
+        `, [groupId]);
+
+        // 2. Fetch All Destinations
+        // (Assuming you have a 'destinations' table)
+        const [destinations] = await db.query("SELECT * FROM destinations");
+
+        if (users.length === 0 || destinations.length === 0) {
+            return res.json([]);
+        }
+
+        // 3. Prepare Data for Python
+        const inputData = JSON.stringify({ users, destinations });
+
+        // 4. Spawn Python Process
+        const pythonProcess = spawn('python', ['./recommend_engine.py']); // Use 'python3' on Mac/Linux if needed
+
+        let result = '';
+        let errorData = '';
+
+        // Send data to Python via stdin
+        pythonProcess.stdin.write(inputData);
+        pythonProcess.stdin.end();
+
+        // Listen for data back
+        pythonProcess.stdout.on('data', (data) => {
+            result += data.toString();
+        });
+
+        pythonProcess.stderr.on('data', (data) => {
+            errorData += data.toString();
+        });
+
+        pythonProcess.on('close', (code) => {
+            if (code !== 0) {
+                console.error("Python Error:", errorData);
+                return res.status(500).json({ error: "Recommendation Engine Failed" });
+            }
+            try {
+                const recommendations = JSON.parse(result);
+                res.json(recommendations);
+            } catch (e) {
+                console.error("JSON Parse Error:", e);
+                res.status(500).json({ error: "Failed to parse recommendations" });
+            }
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Server Error" });
     }
 });
 

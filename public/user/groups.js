@@ -112,27 +112,27 @@ async function selectGroup(id, element) {
 // ==========================================
 // 3. TAB SWITCHING LOGIC (UPDATED)
 // ==========================================
+// UPDATE your switchTab function
 function switchTab(tabName, btnElement) {
-    // Hide all tabs
+    // ... existing hide logic ...
     document.querySelectorAll('.tab-pane').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.tab-link').forEach(el => el.classList.remove('active'));
     
-    // Show selected tab
     document.getElementById(`tab-${tabName}`).style.display = 'block';
     if(btnElement) btnElement.classList.add('active');
 
-    // Load Data for specific tab
     if (tabName === 'members') loadGroupMembers();
     if (tabName === 'destinations') loadTrips('destinationsList');
     if (tabName === 'vote') loadTrips('votingList'); 
-    if (tabName === 'recommend') loadRecommendations();
-
-    // NEW: Calendar Load
+    
+    // UPDATE THIS PART
+    if (tabName === 'recommend') {
+        loadAIRecommendations(); // New AI Load
+        loadRecommendations();   // Old Favourites Load
+    }
+    
     if (tabName === 'calendar') {
-        // Slight delay to ensure div is visible before rendering calendar
-        setTimeout(() => {
-            loadGroupCalendar(currentGroupId);
-        }, 100);
+        setTimeout(() => loadGroupCalendar(currentGroupId), 100);
     }
 }
 
@@ -456,4 +456,73 @@ async function submitDeleteGroup() {
         closeModal('modalDelete');
         window.location.reload(); 
     } catch (e) { alert(e.message); }
+}
+
+// NEW FUNCTION: Load AI Recommendations
+async function loadAIRecommendations() {
+    const container = document.getElementById('ai-recommend-container');
+    container.innerHTML = '<p style="text-align:center; padding:20px;">🤖 AI is finding the best spots for your group...</p>';
+
+    try {
+        const recommendations = await fetchAPI(`/api/groups/${currentGroupId}/ai-recommend`);
+        
+        // Use the Render Function you provided
+        renderGridInContainer(recommendations, 'ai-recommend-container');
+
+    } catch (err) {
+        container.innerHTML = `<p style="text-align:center; color:red;">Could not load AI suggestions.</p>`;
+        console.error(err);
+    }
+}
+
+// ADAPTED RENDER FUNCTION (To work inside specific containers)
+function renderGridInContainer(data, containerId) {
+    const grid = document.getElementById(containerId);
+    
+    if (!data || data.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align:center; color:#999; padding:20px;">
+                <h4>No matches found 😕</h4>
+                <p>Try updating member preferences.</p>
+            </div>`;
+        return;
+    }
+
+    // Reuse your exact card template
+    grid.innerHTML = data.map(item => {
+        const imgUrl = item.images || 'https://via.placeholder.com/400x300?text=Aroov+Trip';
+        
+        // Note: For AI recommendations, we typically want "Add to Group" not "Like"
+        // But I will keep your card style. I added a specific "Add" button for this context.
+        
+        const priceDisplay = item.price_min > 0 ? `RM${item.price_min} - ${item.price_max}` : 'Free';
+        
+        // Safe quote handling
+        const safeJson = JSON.stringify({destination_id: item.dest_id}).replace(/"/g, '&quot;');
+
+        return `
+        <div class="card" style="border: 2px solid #e0f2fe;"> <div class="card-image-wrapper">
+                <img src="${imgUrl}" class="card-img" alt="${item.name}">
+                <div class="card-overlay">
+                    <div class="card-title">${item.name}</div>
+                    <div class="card-location"><span>📍 ${item.state} • ${item.type}</span></div>
+                </div>
+                <div style="position:absolute; top:10px; right:10px; background:#3b82f6; color:white; padding:4px 8px; border-radius:12px; font-size:10px; font-weight:bold;">
+                    ${Math.round(item.similarity * 100)}% Match
+                </div>
+            </div>
+            
+            <div class="card-bottom">
+                <div class="card-price">
+                    <span class="price-label">Est. Price</span>
+                    <span class="price-value">${priceDisplay}</span>
+                </div>
+                <div class="card-icons">
+                     <button class="btn-primary" style="padding:5px 10px; font-size:12px;" onclick="addToGroup(${item.dest_id})">
+                        Add ➕
+                    </button>
+                </div>
+            </div>
+        </div>
+    `}).join('');
 }
