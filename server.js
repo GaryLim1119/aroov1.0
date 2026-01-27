@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const mysql = require('mysql2'); 
+const mysql = require('mysql2/promise'); 
 const cors = require('cors');
 const path = require('path');
 const cookieSession = require('cookie-session');
@@ -10,17 +10,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
-const protocol = req.protocol;
-const host = req.get('host');
-// The URL must point to your new Python API
-const pythonApiUrl = `${protocol}://${host}/api/recommend`; 
 
-const response = await fetch(pythonApiUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ users, destinations })
-});
-// ...
 
 // --- CLOUDINARY IMPORTS ---
 const cloudinary = require('cloudinary').v2;
@@ -992,11 +982,13 @@ app.get('/api/groups/:groupId/calendar', checkAuthenticated, async (req, res) =>
 // Add 'node-fetch' if you are on older Node.js, otherwise built-in 'fetch' works
 // If needed: const fetch = require('node-fetch'); 
 
+// --- server.js (SCROLL DOWN TO THIS ROUTE) ---
+
 app.get('/api/groups/:groupId/ai-recommend', checkAuthenticated, async (req, res) => {
     const { groupId } = req.params;
 
     try {
-        // 1. Fetch Data from MySQL
+        // 1. Fetch Users & Destinations
         const [users] = await db.query(`
             SELECT u.budget_min, u.budget_max, u.preferred_activities, u.preferred_types 
             FROM group_members gm
@@ -1006,18 +998,23 @@ app.get('/api/groups/:groupId/ai-recommend', checkAuthenticated, async (req, res
 
         const [destinations] = await db.query("SELECT * FROM destination");
 
-        if (users.length === 0 || destinations.length === 0) return res.json([]);
+        if (users.length === 0 || destinations.length === 0) {
+            return res.json([]);
+        }
 
-        // 2. Determine the URL for the Python API
-        // On Vercel, it lives at /api/recommend
-        // On Localhost, we need the full URL
+        // ============================================
+        // ✅ PASTE THE CODE HERE (INSIDE THE ROUTE)
+        // ============================================
+        
+        // Define URL dynamically
         const protocol = req.protocol;
         const host = req.get('host');
-        const pythonApiUrl = `${protocol}://${host}/api/recommend`;
+        
+        // Use full URL for internal API call
+        const pythonApiUrl = `${protocol}://${host}/api/recommend`; 
+        console.log("Calling Python AI at:", pythonApiUrl);
 
-        console.log("Sending data to Python AI at:", pythonApiUrl);
-
-        // 3. Send Data to Python Function
+        // Call the Python API
         const response = await fetch(pythonApiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1025,17 +1022,15 @@ app.get('/api/groups/:groupId/ai-recommend', checkAuthenticated, async (req, res
         });
 
         if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`Python API Failed: ${errText}`);
+            throw new Error(`Python API Failed: ${response.statusText}`);
         }
 
         const recommendations = await response.json();
         res.json(recommendations);
 
     } catch (err) {
-        console.error("AI Recommendation Error:", err.message);
-        // Fallback: If Python fails, return empty list so app doesn't crash
-        res.json([]); 
+        console.error("AI Error:", err);
+        res.status(500).json({ error: "Failed to fetch recommendations" });
     }
 });
 
