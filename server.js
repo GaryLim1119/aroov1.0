@@ -984,7 +984,7 @@ app.get('/api/groups/:groupId/ai-recommend', checkAuthenticated, async (req, res
     const { groupId } = req.params;
 
     try {
-        // 1. Fetch Group Members & Their Preferences
+        // 1. Fetch Group Members
         const [users] = await db.query(`
             SELECT u.budget_min, u.budget_max, u.preferred_activities, u.preferred_types 
             FROM group_members gm
@@ -992,11 +992,12 @@ app.get('/api/groups/:groupId/ai-recommend', checkAuthenticated, async (req, res
             WHERE gm.group_id = ?
         `, [groupId]);
 
-        // 2. Fetch All Destinations
-        // (Assuming you have a 'destinations' table)
-        const [destinations] = await db.query("SELECT * FROM destinations");
+        // 2. Fetch All Destinations (CORRECTED TABLE NAME)
+        // CHANGED 'destinations' -> 'destination'
+        const [destinations] = await db.query("SELECT * FROM destination"); 
 
         if (users.length === 0 || destinations.length === 0) {
+            console.log("No users or destinations found.");
             return res.json([]);
         }
 
