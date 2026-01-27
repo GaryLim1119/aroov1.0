@@ -13,6 +13,30 @@
 
 <body>
 
+<div id="detailModal" class="modal">
+    <div class="modal-content" id="modalContentInject">
+        </div>
+</div>
+
+<div id="shareModal" class="modal-overlay">
+    <div class="share-box">
+        <div class="share-header">
+            <h3>Share to Group</h3>
+            <button class="close-share" onclick="closeShareModal()">×</button>
+        </div>
+        <div class="share-body">
+            <div class="share-actions">
+                <button class="btn-share-action" onclick="actionCopyLink()">🔗 Copy Link</button>
+                <button class="btn-share-action" onclick="actionEmailShare()">✉️ Email</button>
+            </div>
+            <hr class="share-divider">
+            <div class="share-label">Add to groups</div>
+            <div id="shareGroupList" class="share-group-list">
+                </div>
+        </div>
+    </div>
+</div>
+
 <nav class="navbar">
     <div class="logo">Aroov Trip.</div>
 

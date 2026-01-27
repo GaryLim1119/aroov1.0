@@ -488,20 +488,20 @@ function renderGridInContainer(data, containerId) {
         return;
     }
 
-    // Reuse your exact card template
     grid.innerHTML = data.map(item => {
         const imgUrl = item.images || 'https://via.placeholder.com/400x300?text=Aroov+Trip';
-        
-        // Note: For AI recommendations, we typically want "Add to Group" not "Like"
-        // But I will keep your card style. I added a specific "Add" button for this context.
-        
         const priceDisplay = item.price_min > 0 ? `RM${item.price_min} - ${item.price_max}` : 'Free';
         
-        // Safe quote handling
-        const safeJson = JSON.stringify({destination_id: item.dest_id}).replace(/"/g, '&quot;');
+        // --- KEY CHANGE 1: Prepare Full Object for the Modal ---
+        // We use &quot; to escape quotes so it works inside the HTML attribute
+        const safeFullItem = JSON.stringify(item).replace(/"/g, '&quot;');
+
+        // For the specific "Add" function, we might just need the ID
+        const destId = item.dest_id;
 
         return `
-        <div class="card" style="border: 2px solid #e0f2fe;"> <div class="card-image-wrapper">
+        <div class="card" style="border: 2px solid #e0f2fe;"> 
+            <div class="card-image-wrapper">
                 <img src="${imgUrl}" class="card-img" alt="${item.name}">
                 <div class="card-overlay">
                     <div class="card-title">${item.name}</div>
@@ -518,11 +518,15 @@ function renderGridInContainer(data, containerId) {
                     <span class="price-value">${priceDisplay}</span>
                 </div>
                 <div class="card-icons">
-                     <button class="btn-primary" style="padding:5px 10px; font-size:12px;" onclick="addToGroup('${item.dest_id}')">
+                     <button class="btn-primary" style="padding:8px 12px; font-size:12px; border:none; background:#222; color:#fff; border-radius:20px; cursor:pointer;" onclick="addToGroup('${destId}', this)">
                         Add ➕
                     </button>
                 </div>
             </div>
+
+            <button class="btn-details" onclick="openModal(${safeFullItem})">
+                View Details
+            </button>
         </div>
     `}).join('');
 }
