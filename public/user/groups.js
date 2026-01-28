@@ -210,9 +210,16 @@ async function loadTrips(containerId) {
                         Shared by: <strong>${t.shared_by}</strong>
                     </div>
                 </div>
-                <div class="trip-actions">
+                
+                <div class="trip-actions" style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                    
                     <button class="btn-vote ${t.user_has_voted ? 'voted' : ''}" onclick="vote(${t.trip_ref_id})">
                         ${t.user_has_voted ? '❤️' : '🤍'} ${t.vote_count} Votes
+                    </button>
+
+                    <button onclick="removeTrip(${t.trip_ref_id})" 
+                            style="background:transparent; border:1px solid #ffcccc; color:red; padding:6px 10px; border-radius:15px; cursor:pointer; font-size:12px;">
+                        Remove 🗑️
                     </button>
                 </div>
             </div>
@@ -634,6 +641,38 @@ function openModal(item) {
 
     // Show the modal (CSS must be set to display:flex or block)
     modal.style.display = 'flex';
+}
+
+// ==========================================
+// NEW: Remove Trip Function
+// ==========================================
+async function removeTrip(tripRefId) {
+    // 1. Confirm before deleting to prevent accidents
+    if (!confirm("Are you sure you want to remove this destination from the group?")) {
+        return;
+    }
+
+    try {
+        // 2. Call the Delete API
+        // Note: You need to make sure your backend supports DELETE at this URL
+        await fetchAPI(`/api/groups/${currentGroupId}/trips/${tripRefId}`, {
+            method: 'DELETE'
+        });
+
+        // 3. Refresh the list to show it's gone
+        const activeTab = document.querySelector('.tab-link.active').innerText;
+        
+        // Reload the correct list depending on which tab is open
+        if(activeTab.includes('Voting')) {
+             loadTrips('votingList');
+        } else {
+             loadTrips('destinationsList');
+        }
+
+    } catch (err) {
+        console.error(err);
+        alert("Unable to remove trip: " + err.message);
+    }
 }
 
 // --- 2. CLOSE MODAL FUNCTION ---

@@ -1050,6 +1050,30 @@ app.get('/api/groups/:groupId/ai-recommend', checkAuthenticated, async (req, res
     }
 });
 
+// DELETE: Remove a trip from a group
+// DELETE: Remove a trip from a group (MySQL Version)
+app.delete('/api/groups/:groupId/trips/:tripRefId', async (req, res) => {
+    const { groupId, tripRefId } = req.params;
+
+    try {
+        // MySQL uses '?' for placeholders
+        const query = `
+            DELETE FROM group_trips 
+            WHERE id = ? AND group_id = ?
+        `;
+        
+        // Pass the values in the same order as the '?' marks
+        // [First '?', Second '?']
+        await db.query(query, [tripRefId, groupId]);
+
+        res.json({ message: "Place removed successfully" });
+
+    } catch (err) {
+        console.error("Error removing place:", err);
+        res.status(500).json({ error: "Server error deleting place" });
+    }
+});
+
 
 
 const PORT = process.env.PORT || 3000;
