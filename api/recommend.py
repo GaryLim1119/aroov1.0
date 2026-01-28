@@ -105,8 +105,8 @@ class handler(BaseHTTPRequestHandler):
                         price_similarity = 0.5 # Default if price data is broken
 
                     # --- FINAL COMBINED SCORE ---
-                    # We give 60% importance to Activities/Tags and 40% to Budget
-                    final_score = (tag_similarity * 0.6) + (price_similarity * 0.4)
+                    # We give 80% importance to Activities/Tags and 20% to Budget
+                    final_score = (tag_similarity * 0.8) + (price_similarity * 0.2)
 
                     # Store Result
                     dest['similarity'] = final_score
