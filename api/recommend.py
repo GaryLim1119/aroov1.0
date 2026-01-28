@@ -31,13 +31,12 @@ class handler(BaseHTTPRequestHandler):
             for u in users:
                 try:
                     val = u.get('budget_max')
-                    # Check if val is not None and not empty string
                     if val is not None and str(val).strip() != "":
                         valid_budgets.append(float(val))
                 except:
-                    continue # Skip this user's budget if corrupt
+                    continue 
 
-            # RULE: If valid budgets exist, average them. If ALL are NULL, use default 5000.
+            # Calculate Group Average Budget
             if valid_budgets:
                 avg_max_budget = sum(valid_budgets) / len(valid_budgets)
             else:
@@ -47,64 +46,73 @@ class handler(BaseHTTPRequestHandler):
             group_tags = []
             for u in users:
                 try:
-                    # Clean and merge both activity and type preferences
                     acts = self._clean_list(u.get('preferred_activities'))
                     types = self._clean_list(u.get('preferred_types'))
                     group_tags.extend(acts + types)
                 except:
                     continue 
 
-            # RULE: If no tags found (All NULL), use generic travel tags
             if not group_tags: 
                 group_tags = ["nature", "city", "relax", "scenic", "food", "adventure"]
             
-            # Create Vector and Magnitude
+            # Create Vector for Tags
             group_vec = Counter(group_tags)
             mag_group = math.sqrt(sum(val**2 for val in group_vec.values()))
-            
-            # Safety: If magnitude is 0 (shouldn't happen due to defaults), make it 1 to avoid crash
             if mag_group == 0: mag_group = 1
 
             # ==========================================
-            # B. SCORING ENGINE
+            # B. SCORING ENGINE (UPDATED)
             # ==========================================
             scored_destinations = []
 
             for dest in destinations:
                 try:
-                    # 1. Build Destination Vector (Handle missing fields safely)
+                    # --- SCORE 1: TAG MATCHING (60% Weight) ---
                     d_type = str(dest.get('type') or "")
                     d_state = str(dest.get('state') or "")
                     d_name = str(dest.get('name') or "")
                     
+                    # Combine destination text for matching
                     d_text = f"{d_type} {d_state} {d_name}".lower()
                     dest_vec = Counter(d_text.split())
 
-                    # 2. Cosine Similarity
+                    # Cosine Similarity for Tags
                     common_words = set(group_vec.keys()) & set(dest_vec.keys())
                     dot_product = sum(group_vec[word] * dest_vec[word] for word in common_words)
-                    
                     mag_dest = math.sqrt(sum(val**2 for val in dest_vec.values()))
 
-                    similarity = 0
+                    tag_similarity = 0
                     if mag_dest > 0:
-                        similarity = dot_product / (mag_group * mag_dest)
+                        tag_similarity = dot_product / (mag_group * mag_dest)
 
-                    # 3. Budget Bonus
+                    # --- SCORE 2: PRICE MATCHING (40% Weight) ---
+                    price_similarity = 0
                     try:
                         price = float(dest.get('price_min') or 0)
-                        # If price is within 20% over budget, or budget is high default
-                        if price <= (avg_max_budget * 1.2):
-                            similarity += 0.1
+                        
+                        if price <= avg_max_budget:
+                            # Perfect match if within budget
+                            price_similarity = 1.0
+                        else:
+                            # If expensive, score drops gradually. 
+                            # Formula: Budget / Price. 
+                            # Example: Budget 100, Price 200 -> Score 0.5
+                            price_similarity = avg_max_budget / price
+                            
+                            # Floor it at 0 to avoid negative errors
+                            if price_similarity < 0: price_similarity = 0
                     except:
-                        pass # Ignore price error, keep calculated similarity
+                        price_similarity = 0.5 # Default if price data is broken
+
+                    # --- FINAL COMBINED SCORE ---
+                    # We give 60% importance to Activities/Tags and 40% to Budget
+                    final_score = (tag_similarity * 0.6) + (price_similarity * 0.4)
 
                     # Store Result
-                    dest['similarity'] = similarity
+                    dest['similarity'] = final_score
                     scored_destinations.append(dest)
                 
                 except Exception:
-                    # If one destination fails, skip it. Don't crash the whole app.
                     continue
 
             # ==========================================
@@ -117,7 +125,6 @@ class handler(BaseHTTPRequestHandler):
             self._send_json(scored_destinations[:10])
 
         except Exception as e:
-            # Catch global crashes
             self._send_error(str(e))
 
     # --- HELPERS ---
@@ -125,7 +132,6 @@ class handler(BaseHTTPRequestHandler):
         if not val: return []
         try:
             if isinstance(val, str):
-                # Handle stringified arrays like "['Nature', 'Beach']"
                 val = val.replace('[','').replace(']','').replace('"','').replace("'",'').split(',')
             return [str(x).strip().lower() for x in val if x.strip()]
         except:
