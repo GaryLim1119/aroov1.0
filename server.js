@@ -222,9 +222,9 @@ app.get('/logout', (req, res, next) => {
     req.logout((err) => { if (err) return next(err); res.redirect('/'); });
 });
 
-const GOOGLE_CLIENT_ID = "210689726347-q6jcthta2sroh2utl0qm1h78smkfor6l.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID; // Reads from your .env file
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
-// --- FLUTTER GOOGLE NATIVE LOGIN ROUTE ---
+
 // --- THE NEW ROUTE (Put this with your other app.post routes) ---
 app.post('/api/auth/google/native', async (req, res) => {
   const { idToken } = req.body;
