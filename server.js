@@ -255,14 +255,14 @@ app.post('/api/auth/google/native', async (req, res) => {
         // User exists -> Log them in
         user = rows[0];
         // Optional: Update picture
-        await db.query('UPDATE users SET google_id = ?, picture = ? WHERE email = ?', [googleId, picture, email]);
+        await db.query('UPDATE users SET picture = ? WHERE email = ?', [picture, email]);
     } else {
         // User does NOT exist -> Create them
         console.log("Creating new user from Google:", email);
-        const insertSql = 'INSERT INTO users (name, email, role, picture, google_id) VALUES (?, ?, ?, ?, ?)';
+        const insertSql = 'INSERT INTO users (name, email, role, picture) VALUES (?, ?, ?, ?)';
         
         // Default role is 'user'
-        const [result] = await db.query(insertSql, [name, email, 'user', picture, googleId]);
+        const [result] = await db.query(insertSql, [name, email, 'user', picture]);
         
         // Get the new user ID
         const [newUserRows] = await db.query('SELECT * FROM users WHERE id = ?', [result.insertId]);
