@@ -247,8 +247,7 @@ app.post('/api/auth/google/native', async (req, res) => {
     const googleId = payload.sub;
 
     // 2. Check Database (SQL / TiDB)
-    // NOTE: Make sure your database variable is named 'db'. If it is 'pool', change 'db' to 'pool'.
-    const [rows] = await db.promise().query('SELECT * FROM users WHERE email = ?', [email]);
+    const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
     
     let user = null;
 
@@ -256,17 +255,17 @@ app.post('/api/auth/google/native', async (req, res) => {
         // User exists -> Log them in
         user = rows[0];
         // Optional: Update picture
-        await db.promise().query('UPDATE users SET google_id = ?, picture = ? WHERE email = ?', [googleId, picture, email]);
+        await db.query('UPDATE users SET google_id = ?, picture = ? WHERE email = ?', [googleId, picture, email]);
     } else {
         // User does NOT exist -> Create them
         console.log("Creating new user from Google:", email);
         const insertSql = 'INSERT INTO users (name, email, role, picture, google_id) VALUES (?, ?, ?, ?, ?)';
         
         // Default role is 'user'
-        const [result] = await db.promise().query(insertSql, [name, email, 'user', picture, googleId]);
+        const [result] = await db.query(insertSql, [name, email, 'user', picture, googleId]);
         
         // Get the new user ID
-        const [newUserRows] = await db.promise().query('SELECT * FROM users WHERE id = ?', [result.insertId]);
+        const [newUserRows] = await db.query('SELECT * FROM users WHERE id = ?', [result.insertId]);
         user = newUserRows[0];
     }
 
