@@ -760,7 +760,7 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-app.get('/api/user/groups', async (req, res) => {
+app.get('/api/user/groups', checkAuthenticated, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const userId = req.user.id || req.user.user_id;
 
@@ -779,7 +779,7 @@ app.get('/api/user/groups', async (req, res) => {
     }
 });
 
-app.post('/api/groups', async (req, res) => {
+app.post('/api/groups', checkAuthenticated, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const { name } = req.body;
     const userId = req.user.id || req.user.user_id; 
@@ -794,7 +794,7 @@ app.post('/api/groups', async (req, res) => {
     }
 });
 
-app.put('/api/groups/:id', async (req, res) => {
+app.put('/api/groups/:id', checkAuthenticated, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const { name } = req.body;
     const groupId = req.params.id;
@@ -811,7 +811,7 @@ app.put('/api/groups/:id', async (req, res) => {
     }
 });
 
-app.delete('/api/groups/:id', async (req, res) => {
+app.delete('/api/groups/:id', checkAuthenticated, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const groupId = req.params.id;
     const userId = req.user.id || req.user.user_id; 
@@ -827,7 +827,7 @@ app.delete('/api/groups/:id', async (req, res) => {
     }
 });
 
-app.get('/api/groups/:id', async (req, res) => {
+app.get('/api/groups/:id', checkAuthenticated, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const groupId = req.params.id;
     const userId = req.user.id || req.user.user_id;
@@ -856,7 +856,7 @@ app.get('/api/groups/:id', async (req, res) => {
 });
 
 // --- INVITE MEMBER ---
-app.post('/api/groups/:id/invite', async (req, res) => {
+app.post('/api/groups/:id/invite', checkAuthenticated, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     
     const groupId = req.params.id;
@@ -921,7 +921,7 @@ app.get('/api/join', async (req, res) => {
 // SHARED TRIPS & VOTING
 // ==========================================
 
-app.post('/api/groups/:groupId/recommend', async (req, res) => {
+app.post('/api/groups/:groupId/recommend', checkAuthenticated, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     
     const { groupId } = req.params;
@@ -952,7 +952,7 @@ app.post('/api/groups/:groupId/recommend', async (req, res) => {
     }
 });
 
-app.get('/api/groups/:groupId/trips', async (req, res) => {
+app.get('/api/groups/:groupId/trips', checkAuthenticated, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const { groupId } = req.params;
     const userId = req.user.id || req.user.user_id; 
@@ -979,7 +979,7 @@ app.get('/api/groups/:groupId/trips', async (req, res) => {
     }
 });
 
-app.post('/api/groups/vote', async (req, res) => {
+app.post('/api/groups/vote', checkAuthenticated, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
     const { tripRefId } = req.body;
     const userId = req.user.id || req.user.user_id; 
@@ -1161,7 +1161,7 @@ app.get('/api/groups/:groupId/ai-recommend', checkAuthenticated, async (req, res
 });
 
 // DELETE: Remove a trip from a group
-app.delete('/api/groups/:groupId/trips/:tripRefId', async (req, res) => {
+app.delete('/api/groups/:groupId/trips/:tripRefId', checkAuthenticated, async (req, res) => {
     const { groupId, tripRefId } = req.params;
 
     try {
