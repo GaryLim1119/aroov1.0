@@ -640,7 +640,7 @@ app.get('/api/user/favourites', checkAuthenticated, async (req, res) => {
 // --- DESTINATIONS API ---
 // =========================================================
 
-app.get('/api/destinations', async (req, res) => {
+app.get('/api/destinations', checkAuthenticated, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = 15;
