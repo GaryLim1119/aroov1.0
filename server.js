@@ -1,6 +1,5 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
-console.log('🚀 AROOV SERVER STARTING - VERSION 1.0.1 - WITH FULL TRIP DETAILS');
 const express = require('express');
 const mysql = require('mysql2'); 
 const cors = require('cors');
@@ -972,9 +971,6 @@ app.get('/api/groups/:groupId/trips', checkAuthenticated, async (req, res) => {
             ORDER BY vote_count DESC
         `, [userId, groupId]);
 
-        if (rows.length > 0) {
-            console.log('DEBUG TRIPS ROW 0:', rows[0]);
-        }
         res.json(rows);
     } catch (err) {
         console.error("Trips Error:", err);
