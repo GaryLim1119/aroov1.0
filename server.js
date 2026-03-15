@@ -1,8 +1,9 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+console.log('🚀 AROOV SERVER STARTING - VERSION 1.0.1 - WITH FULL TRIP DETAILS');
 const express = require('express');
 const mysql = require('mysql2'); 
 const cors = require('cors');
-const path = require('path');
 const cookieSession = require('cookie-session');
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
@@ -480,12 +481,10 @@ app.get('/api/user/calendar', checkAuthenticated, async (req, res) => {
             const name = row.event_name || row.name || row.title || "University Event";
 
             // Determine Color
-            let color = '#3b82f6'; // Default Blue
+            let color = '#ef4444'; // Default Red for busy/class
             const typeLower = String(type).toLowerCase(); // safe lowercase
             
-            if (typeLower.includes('exam')) color = '#ef4444';       // Red
-            else if (typeLower.includes('break')) color = '#22c55e'; // Green
-            else if (typeLower.includes('holiday')) color = '#f59e0b'; // Orange
+            if (typeLower.includes('break')) color = '#22c55e'; // Green for breaks
 
             if(s && e) {
                 events.push({
@@ -962,6 +961,7 @@ app.get('/api/groups/:groupId/trips', checkAuthenticated, async (req, res) => {
             SELECT 
                 gt.trip_ref_id, gt.shared_at,
                 d.dest_id, d.name, d.state, d.type, d.images, d.price_min,
+                d.description, d.latitude, d.longtitude, d.maps_place_id, d.activities, d.price_max,
                 u.name as shared_by,
                 (SELECT COUNT(*) FROM group_votes WHERE trip_ref_id = gt.trip_ref_id) as vote_count,
                 (SELECT COUNT(*) FROM group_votes WHERE trip_ref_id = gt.trip_ref_id AND user_id = ?) as user_has_voted
@@ -972,6 +972,9 @@ app.get('/api/groups/:groupId/trips', checkAuthenticated, async (req, res) => {
             ORDER BY vote_count DESC
         `, [userId, groupId]);
 
+        if (rows.length > 0) {
+            console.log('DEBUG TRIPS ROW 0:', rows[0]);
+        }
         res.json(rows);
     } catch (err) {
         console.error("Trips Error:", err);
