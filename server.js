@@ -364,6 +364,7 @@ app.get('/api/user/profile', checkAuthenticated, async (req, res) => {
 
 // 3. Update User Profile
 app.put('/api/user/profile', checkAuthenticated, async (req, res) => {
+    console.log('DEBUG: Profile Update Received:', req.body);
     const { name, role, university_id, budget_min, budget_max, preferred_types, preferred_activities, password } = req.body;
     const userId = req.user.id || req.user.user_id;
 
